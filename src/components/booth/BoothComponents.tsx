@@ -120,14 +120,14 @@ export function CameraView({ onCapture, frame, captureTrigger }: CameraViewProps
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
-      {/* Video Feed */}
+      {/* Video Feed - mirrored for natural mirror-like preview */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
         className="w-full h-full object-cover"
-        style={{ filter: filters[0] === 'none' ? 'none' : filters[0] }}
+        style={{ filter: filters[0] === 'none' ? 'none' : filters[0], transform: 'scaleX(-1)' }}
       />
 
       {/* Frame Overlay */}
