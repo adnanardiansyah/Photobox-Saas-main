@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Eye, Copy, Check, RefreshCw, Loader2, QrCode } from 'lucide-react'
+import { Plus, Search, Eye, Copy, Check, RefreshCw, Loader2, QrCode, X } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Modal, ModalFooter } from './ui/Modal'
+import { Field, Input } from './ui/Field'
 
 interface GalleryData {
   id: string
@@ -192,22 +194,19 @@ export function GalleryModule() {
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {showAddModal && (
-          <AddGalleryModal
-            onClose={() => setShowAddModal(false)}
-            onSuccess={() => {
-              setShowAddModal(false)
-              fetchGalleries()
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <AddGalleryModal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          setShowAddModal(false)
+          fetchGalleries()
+        }}
+      />
     </div>
   )
 }
 
-function AddGalleryModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function AddGalleryModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
   const [galleryCode, setGalleryCode] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
   const [photoInput, setPhotoInput] = useState('')
@@ -269,68 +268,46 @@ function AddGalleryModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add New Gallery"
+      description="Buat galeri baru atau hubungkan dengan kode galeri."
+      icon={Plus}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Gallery</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-              Gallery Code <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <input
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Field label="Gallery Code" hint="Kosongkan untuk auto-generate.">
+            <Input
               type="text"
               value={galleryCode}
               onChange={(e) => setGalleryCode(e.target.value.toUpperCase())}
-              placeholder="e.g. MHN2 (leave empty for auto-generate)"
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. MHN2"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Total Price (Rp)</label>
-            <input
+          <Field label="Total Price (Rp)" required>
+            <Input
               type="number"
               value={totalPrice}
               onChange={(e) => setTotalPrice(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              min="0"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Photos</label>
+          <Field label="Photos" hint="Tambahkan URL foto satu per satu.">
             <div className="flex gap-2 mb-2">
-              <input
+              <Input
                 type="text"
                 value={photoInput}
                 onChange={(e) => setPhotoInput(e.target.value)}
                 placeholder="/photos/photo1.jpg"
-                className="flex-1 px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPhoto() } }}
               />
               <button
                 type="button"
                 onClick={handleAddPhoto}
-                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium shrink-0"
               >
                 Add
               </button>
@@ -340,35 +317,33 @@ function AddGalleryModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                 {photos.map((photo, index) => (
                   <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{photo}</span>
-                    <button type="button" onClick={() => handleRemovePhoto(index)} className="text-red-500 hover:text-red-700 shrink-0 ml-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                    <button type="button" onClick={() => handleRemovePhoto(index)} className="text-red-500 hover:text-red-700 shrink-0 ml-2 p-1">
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Field>
+        </div>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
-            >
-              {saving ? 'Adding...' : 'Add Gallery'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {saving ? 'Adding...' : 'Add Gallery'}
+          </button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }

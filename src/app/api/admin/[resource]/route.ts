@@ -91,6 +91,21 @@ async function normalizePayload(resource: string, payload: any) {
     await injectTenantId(payload)
   }
 
+  // Untuk frameTemplates: isi width/height wajib dari form, pakai default per tipe
+  if (resource === 'frameTemplates') {
+    const dimsByType: Record<string, { width: number; height: number }> = {
+      FOUR_R: { width: 1200, height: 1800 },
+      A4_NEWSPAPER: { width: 2480, height: 3508 },
+      CUSTOM: { width: 1200, height: 1800 },
+    }
+    const type = payload.type || 'FOUR_R'
+    const dims = dimsByType[type] || dimsByType.CUSTOM
+    payload.type = type
+    payload.width = payload.width ?? dims.width
+    payload.height = payload.height ?? dims.height
+    payload.imageUrl = payload.imageUrl ?? ''
+  }
+
   // Fix photos field untuk sessionPhotos
   if (resource === 'sessionPhotos' && payload.photos && !Array.isArray(payload.photos)) {
     payload.photos = typeof payload.photos === 'string' ? JSON.parse(payload.photos) : payload.photos
@@ -197,6 +212,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { resou
     }
 
     const prismaClient = (prisma as any)[modelName] as any
+
+    // Frame template yang sudah dipakai session tidak boleh dihapus keras ->
+    // activekan false (soft delete) supaya tidak error FK
+    if (params.resource === 'frameTemplates') {
+      await prismaClient.update({ where: { id }, data: { isActive: false } })
+      return NextResponse.json({ success: true })
+    }
+
     await prismaClient.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {

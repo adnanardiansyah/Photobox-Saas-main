@@ -8,15 +8,16 @@ import {
   Trash2,
   MapPin,
   Phone,
-  X,
-  Check,
   Cpu,
   Globe,
-  Loader2
+  Loader2,
+  Store
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Modal, ModalFooter } from './ui/Modal'
+import { Field, Input, Switch } from './ui/Field'
 
 interface OutletData {
   id: string
@@ -31,6 +32,7 @@ interface OutletData {
 }
 
 interface OutletFormProps {
+  open: boolean
   outlet?: OutletData | null
   onClose: () => void
   onSubmit: (data: {
@@ -44,7 +46,7 @@ interface OutletFormProps {
   }) => void
 }
 
-function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
+function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
   const [formData, setFormData] = useState({
     name: outlet?.name || '',
     address: outlet?.address || '',
@@ -78,127 +80,98 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={outlet ? 'Edit Outlet' : 'Add New Outlet'}
+      description={outlet ? 'Perbarui detail outlet photo booth Anda.' : 'Buat outlet photo booth baru untuk tim Anda.'}
+      icon={Store}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {outlet ? 'Edit Outlet' : 'Add New Outlet'}
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Outlet Name</label>
-            <input
-              type="text"
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Field label="Outlet Name" required>
+            <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. Trans Studio Mall"
               required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Address</label>
-            <input
-              type="text"
+          <Field label="Address" required>
+            <Input
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. Jl. Jend. Sudirman No. 12"
               required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Phone</label>
-            <input
-              type="text"
+          <Field label="Phone">
+            <Input
+              type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="+62 812 3456 7890"
             />
-          </div>
+          </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Latitude</label>
-              <input
+            <Field label="Latitude" required>
+              <Input
                 type="number"
                 step="any"
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value as unknown as number })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="-6.2088"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Longitude</label>
-              <input
+            </Field>
+            <Field label="Longitude" required>
+              <Input
                 type="number"
                 step="any"
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value as unknown as number })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="106.8456"
                 required
               />
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Machine ID</label>
-            <input
-              type="text"
+          <Field label="Machine ID" hint="ID mesin photo booth agar sesi foto terhubung otomatis.">
+            <Input
               value={formData.machineId}
               onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. PB-0001"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Active</span>
-            </label>
-          </div>
+          <Switch
+            checked={formData.isActive}
+            onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            label="Active"
+            description="Outlet aktif akan terlihat dan terpakai di aplikasi."
+          />
+        </div>
 
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <span className="text-gray-900 dark:text-white">Cancel</span>
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
-            >
-              {outlet ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
+          >
+            {outlet ? 'Update' : 'Create'}
+          </button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }
 
@@ -210,10 +183,18 @@ export function OutletModule() {
   const [editingOutlet, setEditingOutlet] = useState<OutletData | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
+  const parseRes = async (res: Response) => {
+    try {
+      return await res.json()
+    } catch {
+      return { success: false, error: `Server error (${res.status}) - respons bukan JSON` }
+    }
+  }
+
   const fetchOutlets = async () => {
     try {
       const res = await fetch('/api/admin/outlets')
-      const data = await res.json()
+      const data = await parseRes(res)
       if (data.success) setOutlets(data.data)
       else toast.error('Failed to load outlets')
     } catch {
@@ -231,7 +212,7 @@ export function OutletModule() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     })
-    const data = await res.json()
+    const data = await parseRes(res)
     if (data.success) {
       toast.success('Outlet created successfully!')
       fetchOutlets()
@@ -247,7 +228,7 @@ export function OutletModule() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     })
-    const data = await res.json()
+    const data = await parseRes(res)
     if (data.success) {
       toast.success('Outlet updated successfully!')
       fetchOutlets()
@@ -258,7 +239,7 @@ export function OutletModule() {
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/admin/outlets?id=${id}`, { method: 'DELETE' })
-    const data = await res.json()
+    const data = await parseRes(res)
     if (data.success) {
       toast.success('Outlet deleted successfully!')
       setDeleteConfirm(null)
@@ -384,57 +365,42 @@ export function OutletModule() {
         </div>
       )}
 
-      <AnimatePresence>
-        {showForm && (
-          <OutletForm
-            outlet={editingOutlet}
-            onClose={() => {
-              setShowForm(false)
-              setEditingOutlet(null)
-            }}
-            onSubmit={editingOutlet ? handleUpdate : handleCreate}
-          />
-        )}
-      </AnimatePresence>
+      <OutletForm
+        open={showForm}
+        outlet={editingOutlet}
+        onClose={() => {
+          setShowForm(false)
+          setEditingOutlet(null)
+        }}
+        onSubmit={editingOutlet ? handleUpdate : handleCreate}
+      />
 
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      {/* Delete confirmation */}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete Outlet?"
+        description="This action cannot be undone. Are you sure you want to delete this outlet?"
+        icon={Trash2}
+        size="sm"
+      >
+        <div className="px-6 py-4 flex gap-3">
+          <button
+            type="button"
             onClick={() => setDeleteConfirm(null)}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Outlet?</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                This action cannot be undone. Are you sure you want to delete this outlet?
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

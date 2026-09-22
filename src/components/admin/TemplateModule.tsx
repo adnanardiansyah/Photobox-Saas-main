@@ -7,13 +7,14 @@ import {
   Edit,
   Trash2,
   Image as ImageIcon,
-  X,
-  Check,
-  Loader2
+  Loader2,
+  LayoutTemplate
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Modal, ModalFooter } from './ui/Modal'
+import { Field, Input, Select, Switch } from './ui/Field'
 
 interface TemplateData {
   id: string
@@ -29,12 +30,13 @@ interface TemplateData {
 }
 
 interface TemplateFormProps {
+  open: boolean
   template?: TemplateData | null
   onClose: () => void
   onSubmit: (data: any) => void
 }
 
-function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
+function TemplateForm({ open, template, onClose, onSubmit }: TemplateFormProps) {
   const [formData, setFormData] = useState({
     name: template?.name || '',
     type: template?.type || 'FOUR_R',
@@ -59,71 +61,45 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
     onClose()
   }
 
-  const typeLabels: Record<string, string> = {
-    FOUR_R: '4R',
-    A4_NEWSPAPER: 'A4 Newspaper',
-    CUSTOM: 'Custom'
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={template ? 'Edit Template' : 'Add New Template'}
+      description={template ? 'Perbarui template cetak photo booth.' : 'Tambahkan template cetak baru.'}
+      icon={LayoutTemplate}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {template ? 'Edit Template' : 'Add New Template'}
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Template Name</label>
-            <input
-              type="text"
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Field label="Template Name" required>
+            <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. 4R Classic"
               required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Type</label>
-            <select
+          <Field label="Type" required>
+            <Select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="FOUR_R">4R</option>
               <option value="A4_NEWSPAPER">A4 Newspaper</option>
               <option value="CUSTOM">Custom</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Image URL</label>
-            <input
+          <Field label="Image URL">
+            <Input
               type="url"
               value={formData.imageUrl}
               onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="https://.../template.png"
             />
             {formData.imageUrl && (
-              <div className="mt-2 aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <div className="mt-2 aspect-video rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
                 <img
                   src={formData.imageUrl}
                   alt="Preview"
@@ -132,50 +108,44 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
                 />
               </div>
             )}
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Price (Rp)</label>
-            <input
+          <Field label="Price (Rp)" required>
+            <Input
               type="number"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="e.g. 25000"
               required
               min="0"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Active</span>
-            </label>
-          </div>
+          <Switch
+            checked={formData.isActive}
+            onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            label="Active"
+            description="Template aktif tersedia untuk dipilih customer."
+          />
+        </div>
 
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <span className="text-gray-900 dark:text-white">Cancel</span>
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
-            >
-              {template ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
+          >
+            {template ? 'Update' : 'Create'}
+          </button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }
 
@@ -397,57 +367,42 @@ export function TemplateModule() {
         </div>
       )}
 
-      <AnimatePresence>
-        {showForm && (
-          <TemplateForm
-            template={editingTemplate}
-            onClose={() => {
-              setShowForm(false)
-              setEditingTemplate(null)
-            }}
-            onSubmit={editingTemplate ? handleUpdate : handleCreate}
-          />
-        )}
-      </AnimatePresence>
+      <TemplateForm
+        open={showForm}
+        template={editingTemplate}
+        onClose={() => {
+          setShowForm(false)
+          setEditingTemplate(null)
+        }}
+        onSubmit={editingTemplate ? handleUpdate : handleCreate}
+      />
 
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      {/* Delete confirmation */}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete Template?"
+        description="This action cannot be undone. Are you sure you want to delete this template?"
+        icon={Trash2}
+        size="sm"
+      >
+        <div className="px-6 py-4 flex gap-3">
+          <button
+            type="button"
             onClick={() => setDeleteConfirm(null)}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Template?</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                This action cannot be undone. Are you sure you want to delete this template?
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

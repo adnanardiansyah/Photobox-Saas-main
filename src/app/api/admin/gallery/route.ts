@@ -44,14 +44,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Ambil frame template default jika frameId tidak valid / tidak dispecify
+    let targetFrameId: string | null = null
+    if (frameId) {
+      const frameExists = await prisma.frameTemplate.findUnique({ where: { id: frameId } })
+      if (frameExists) targetFrameId = frameId
+    }
+    if (!targetFrameId) {
+      const defaultFrame = await prisma.frameTemplate.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      targetFrameId = defaultFrame?.id ?? null
+    }
+
     // Buat session baru
     const newSession = await prisma.sessionPhoto.create({
       data: {
         outletId: targetOutletId,
-        frameId: frameId || 'frame-4r-classic-001',
+        frameId: targetFrameId,
         sessionCode: `SESSION-${galleryCode}-001`,
         status: 'COMPLETED',
-        photos: JSON.stringify(photos),
+        photos, // kolom Json -> simpan array langsung, bukan JSON.stringify
         totalPrice,
         paymentMethod: 'CASH',
         paymentStatus: 'PAID',

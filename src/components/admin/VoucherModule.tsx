@@ -10,7 +10,6 @@ import {
   Percent,
   DollarSign,
   Calendar,
-  X,
   Check,
   Copy,
   AlertTriangle,
@@ -19,6 +18,8 @@ import {
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Modal, ModalFooter } from './ui/Modal'
+import { Field, Input, Select, Switch } from './ui/Field'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -83,12 +84,13 @@ function CopyButton({ code }: { code: string }) {
 }
 
 interface VoucherFormProps {
+  open: boolean
   voucher?: VoucherData | null
   onClose: () => void
   onSubmit: (data: any) => void
 }
 
-function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
+function VoucherForm({ open, voucher, onClose, onSubmit }: VoucherFormProps) {
   const [formData, setFormData] = useState({
     code: voucher?.code || '',
     type: voucher?.type || 'PERCENTAGE',
@@ -128,113 +130,70 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
     onClose()
   }
 
-  const inputClass = "w-full px-3 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm transition-shadow"
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={voucher ? 'Edit Voucher' : 'Buat Voucher Baru'}
+      description={voucher ? 'Perbarui detail voucher promo Anda.' : 'Buat voucher diskon baru untuk customer.'}
+      icon={Gift}
     >
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 24 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0, y: 24 }}
-        transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="h-1 w-full bg-gradient-to-r from-pink-500 to-purple-600" />
-
-        <div className="flex items-center justify-between px-5 py-4 border-b dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <Gift className="w-5 h-5 text-purple-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-              {voucher ? 'Edit Voucher' : 'Buat Voucher Baru'}
-            </h2>
-          </div>
-          <motion.button
-            onClick={onClose}
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </motion.button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Kode Voucher
-            </label>
-            <input
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Field label="Kode Voucher" required hint="Kode dipakai customer saat checkout.">
+            <Input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              className={inputClass}
               required
               placeholder="e.g. PROMO50"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Tipe Diskon
-            </label>
-            <select
+          <Field label="Tipe Diskon" required>
+            <Select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className={inputClass}
             >
               <option value="PERCENTAGE">Persentase (%)</option>
               <option value="FIXED">Nominal Tetap (Rp)</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Nilai {formData.type === 'PERCENTAGE' ? '(%)' : '(Rp)'}
-            </label>
-            <input
+          <Field
+            label={`Nilai ${formData.type === 'PERCENTAGE' ? '(%)' : '(Rp)'}`}
+            required
+            hint={formData.type === 'PERCENTAGE' ? 'Maksimal 100%.' : undefined}
+          >
+            <Input
               type="number"
               value={formData.value}
               onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) || 0 })}
-              className={inputClass}
-              required min="0"
+              required
+              min="0"
               max={formData.type === 'PERCENTAGE' ? 100 : undefined}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Minimum Pembelian (Rp)
-            </label>
-            <input
+          <Field label="Minimum Pembelian (Rp)" required>
+            <Input
               type="number"
               value={formData.minOrder}
               onChange={(e) => setFormData({ ...formData, minOrder: parseInt(e.target.value) || 0 })}
-              className={inputClass}
-              required min="0"
+              required
+              min="0"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Tipe Pemakaian
-            </label>
-            <select
+          <Field label="Tipe Pemakaian" required>
+            <Select
               value={formData.usageType}
               onChange={(e) => setFormData({ ...formData, usageType: e.target.value })}
-              className={inputClass}
             >
               <option value="MULTI_USE">Multi Use</option>
               <option value="SINGLE_USE">Single Use</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
           {formData.usageType === 'MULTI_USE' && (
             <motion.div
@@ -243,70 +202,62 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.25, ease }}
             >
-              <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Batas Pemakaian
-              </label>
-              <input
-                type="number"
-                value={formData.maxUses}
-                onChange={(e) => setFormData({ ...formData, maxUses: parseInt(e.target.value) || 0 })}
-                className={inputClass}
-                required min="1"
-              />
+              <Field label="Batas Pemakaian" required>
+                <Input
+                  type="number"
+                  value={formData.maxUses}
+                  onChange={(e) => setFormData({ ...formData, maxUses: parseInt(e.target.value) || 0 })}
+                  required
+                  min="1"
+                />
+              </Field>
             </motion.div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             {(['validFrom', 'validUntil'] as const).map((field) => (
-              <div key={field}>
-                <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                  {field === 'validFrom' ? 'Berlaku Dari' : 'Berlaku Sampai'}
-                </label>
-                <input
+              <Field
+                key={field}
+                label={field === 'validFrom' ? 'Berlaku Dari' : 'Berlaku Sampai'}
+                required
+              >
+                <Input
                   type="date"
                   value={formData[field]}
                   onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                  className={inputClass}
                   required
                 />
-              </div>
+              </Field>
             ))}
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className="relative">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 transition-colors" />
-              <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-            </div>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">Aktifkan Voucher</span>
-          </label>
+          <Switch
+            checked={formData.isActive}
+            onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            label="Aktifkan Voucher"
+            description="Voucher aktif dapat dipakai customer."
+          />
+        </div>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-white transition-colors"
-            >
-              Batal
-            </button>
-            <motion.button
-              type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-shadow"
-            >
-              {voucher ? 'Simpan Perubahan' : 'Buat Voucher'}
-            </motion.button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+          >
+            Batal
+          </button>
+          <motion.button
+            type="submit"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-shadow"
+          >
+            {voucher ? 'Simpan Perubahan' : 'Buat Voucher'}
+          </motion.button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }
 
@@ -638,68 +589,39 @@ export function VoucherModule() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showForm && (
-          <VoucherForm
-            voucher={editingVoucher}
-            onClose={() => { setShowForm(false); setEditingVoucher(null) }}
-            onSubmit={editingVoucher ? handleUpdate : handleCreate}
-          />
-        )}
-      </AnimatePresence>
+      <VoucherForm
+        open={showForm}
+        voucher={editingVoucher}
+        onClose={() => { setShowForm(false); setEditingVoucher(null) }}
+        onSubmit={editingVoucher ? handleUpdate : handleCreate}
+      />
 
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      {/* Delete confirmation */}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Hapus Voucher?"
+        description="Tindakan ini tidak dapat dibatalkan."
+        icon={AlertTriangle}
+        size="sm"
+      >
+        <div className="px-6 py-4 flex gap-3">
+          <button
+            type="button"
             onClick={() => setDeleteConfirm(null)}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-              className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <motion.div
-                animate={{ rotate: [0, -8, 8, -8, 0] }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4"
-              >
-                <AlertTriangle className="w-6 h-6 text-red-500" />
-              </motion.div>
-              <h3 className="text-base font-semibold mb-1 text-gray-900 dark:text-white text-center">
-                Hapus Voucher?
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 text-center">
-                Tindakan ini tidak dapat dibatalkan.
-              </p>
-              <div className="flex gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  Batal
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-red-500/25"
-                >
-                  Hapus
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+          >
+            Hapus
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

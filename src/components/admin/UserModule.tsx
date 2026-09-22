@@ -7,15 +7,12 @@ import {
   Edit,
   Trash2,
   User as UserIcon,
-  Mail,
-  Shield,
-  X,
-  Check,
   Loader2
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Modal, ModalFooter } from './ui/Modal'
+import { Field, Input, Select, Switch } from './ui/Field'
 
 interface UserData {
   id: string
@@ -33,12 +30,13 @@ interface OutletOption {
 }
 
 interface UserFormProps {
+  open: boolean
   user?: UserData | null
   onClose: () => void
   onSubmit: (data: any) => void
 }
 
-function UserForm({ user, onClose, onSubmit }: UserFormProps) {
+function UserForm({ open, user, onClose, onSubmit }: UserFormProps) {
   const [outlets, setOutlets] = useState<OutletOption[]>([])
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -50,11 +48,12 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
   })
 
   useEffect(() => {
+    if (!open) return
     fetch('/api/admin/outlets?take=200')
       .then(r => r.json())
       .then(data => { if (data.success) setOutlets(data.data) })
       .catch(() => {})
-  }, [])
+  }, [open])
 
   useEffect(() => {
     setFormData({
@@ -82,143 +81,101 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={user ? 'Edit User' : 'Add New User'}
+      description={user ? 'Perbarui detail anggota tim Anda.' : 'Buat akun anggota tim baru.'}
+      icon={UserIcon}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-800 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {user ? 'Edit User' : 'Add New User'}
-          </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </button>
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Field label="Full Name" required>
+            <Input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Asep Suryana"
+              required
+            />
+          </Field>
+
+          <Field label="Email" required>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="name@company.com"
+              required
+            />
+          </Field>
+
+          <Field
+            label={user ? 'New Password (leave blank to keep current)' : 'Password'}
+            required={!user}
+            hint={!user ? 'Minimal 6 karakter.' : undefined}
+          >
+            <Input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required={!user}
+              minLength={6}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          <Field label="Role" hint="Super Admin tidak terikat outlet.">
+            <Select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+            >
+              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="OWNER">Owner</option>
+              <option value="MANAGER">Manager</option>
+              <option value="STAFF">Staff</option>
+            </Select>
+          </Field>
+
+          {formData.role !== 'SUPER_ADMIN' && (
+            <Field label="Assigned Outlet">
+              <Select
+                value={formData.outletId}
+                onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
+              >
+                <option value="">Select Outlet</option>
+                {outlets.map((outlet) => (
+                  <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
+          <Switch
+            checked={formData.isActive}
+            onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            label="Active"
+            description="Akun aktif dapat login ke dashboard."
+          />
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                {user ? 'New Password (leave blank to keep current)' : 'Password'}
-              </label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                required={!user}
-                minLength={6}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Role
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-              >
-                <option value="SUPER_ADMIN">Super Admin</option>
-                <option value="OWNER">Owner</option>
-                <option value="MANAGER">Manager</option>
-                <option value="STAFF">Staff</option>
-              </select>
-            </div>
-
-            {formData.role !== 'SUPER_ADMIN' && (
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                  Assigned Outlet
-                </label>
-                <select
-                  value={formData.outletId}
-                  onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                >
-                  <option value="">Select Outlet</option>
-                  {outlets.map((outlet) => (
-                    <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="pt-1">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-purple-600 transition-colors" />
-                  <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-                </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">Active</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t dark:border-gray-800 flex gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
-            >
-              {user ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
+          >
+            {user ? 'Update' : 'Create'}
+          </button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }
 
@@ -458,57 +415,42 @@ export function UserModule() {
         </div>
       )}
 
-      <AnimatePresence>
-        {showForm && (
-          <UserForm
-            user={editingUser}
-            onClose={() => {
-              setShowForm(false)
-              setEditingUser(null)
-            }}
-            onSubmit={editingUser ? handleUpdate : handleCreate}
-          />
-        )}
-      </AnimatePresence>
+      <UserForm
+        open={showForm}
+        user={editingUser}
+        onClose={() => {
+          setShowForm(false)
+          setEditingUser(null)
+        }}
+        onSubmit={editingUser ? handleUpdate : handleCreate}
+      />
 
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      {/* Delete confirmation */}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete User?"
+        description="This action cannot be undone. Are you sure you want to delete this user?"
+        icon={Trash2}
+        size="sm"
+      >
+        <div className="px-6 py-4 flex gap-3">
+          <button
+            type="button"
             onClick={() => setDeleteConfirm(null)}
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete User?</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                This action cannot be undone. Are you sure you want to delete this user?
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
