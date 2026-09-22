@@ -108,6 +108,7 @@ interface DashboardState {
   // UI State
   darkMode: boolean
   sidebarOpen: boolean
+  sidebarCollapsed: boolean
   activeModule: string
   searchQuery: string
   
@@ -142,6 +143,7 @@ interface DashboardState {
   // Actions - UI
   toggleDarkMode: () => void
   toggleSidebar: () => void
+  toggleSidebarCollapsed: () => void
   setActiveModule: (module: string) => void
   setSearchQuery: (query: string) => void
 }
@@ -467,6 +469,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   // Initial UI State
   darkMode: false,
   sidebarOpen: true,
+  sidebarCollapsed: false,
   activeModule: 'dashboard',
   searchQuery: '',
   
@@ -549,6 +552,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   // UI Actions
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setActiveModule: (module) => set({ activeModule: module }),
   setSearchQuery: (query) => set({ searchQuery: query })
 }))
