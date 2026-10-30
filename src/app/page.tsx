@@ -23,28 +23,8 @@ import { Footer } from '@/components/landing/Footer'
 
 export default function HomePage() {
   const { branding, outlets } = useDashboardStore()
-  const [stats, setStats] = useState({
-    photos: 10000,
-    outlets: 50,
-    users: 5000,
-    uptime: 99.9
-  })
-
-  const formatNumber = (value: number) =>
-    value.toLocaleString('id-ID')
-
-  // Live stats counter animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        photos: prev.photos + Math.floor(Math.random() * 5),
-        outlets: prev.outlets + (Math.random() > 0.95 ? 1 : 0),
-        users: prev.users + Math.floor(Math.random() * 3),
-        uptime: 99.9
-      }))
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
+  const formatNumber = (value: number) => value.toLocaleString('id-ID')
+  const stats = { outlets: outlets.length, online: outlets.filter(o => o.status === 'online').length }
 
   const onlineOutlets = outlets.filter(o => o.status === 'online')
 
@@ -263,26 +243,26 @@ export default function HomePage() {
           >
             <StatCard 
               icon={ImageIcon}
-              value={formatNumber(stats.photos)}
-              label="Photos Captured"
+              value="QRIS"
+              label="Pembayaran digital"
               color={branding.primaryColor}
             />
             <StatCard 
               icon={MapPin}
               value={stats.outlets.toString()}
-              label="Active Outlets"
+              label="Outlet terdaftar"
               color={branding.secondaryColor}
             />
             <StatCard 
               icon={Users}
-              value={formatNumber(stats.users)}
-              label="Happy Users"
+              value={formatNumber(stats.online)}
+              label="Booth online"
               color={branding.primaryColor}
             />
             <StatCard 
               icon={TrendingUp}
-              value={`${stats.uptime}%`}
-              label="Uptime"
+              value="Web"
+              label="Tanpa instalasi aplikasi"
               color={branding.secondaryColor}
             />
           </motion.div>
