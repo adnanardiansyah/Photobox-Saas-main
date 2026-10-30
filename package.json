@@ -17,7 +17,8 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "test:gallery": "npx tsx simple-test.js",
     "test:create-gallery": "npx tsx create-test-gallery.js",
-    "test:api": "npx tsx test-api.js"
+    "test:api": "npx tsx test-api.js",
+    "test:security": "tsx tests/security.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
