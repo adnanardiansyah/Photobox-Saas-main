@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') throw new Error('Demo seed is disabled in production')
   console.log('🌱 Starting seed...')
 
   // ============================================
