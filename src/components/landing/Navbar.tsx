@@ -223,6 +223,8 @@ function DropdownItem({
 // Navbar Component — Full Premium
 // ============================================
 export function Navbar() {
+  useEffect(() => { useDashboardStore.getState().refreshPublic().catch(() => {}) }, [])
+
   const { branding } = useDashboardStore()
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false)
   const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false)
