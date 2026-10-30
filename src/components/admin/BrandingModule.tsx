@@ -1,17 +1,19 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useEffect, useState } from 'react'
-import { 
-  Palette, 
-  Image as ImageIcon, 
-  Type, 
+import {
+  Palette,
+  Image as ImageIcon,
+  Type,
   Save,
   Upload,
   Loader2
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 
 // ============================================
 // Branding Module Component
@@ -19,7 +21,7 @@ import { motion } from 'framer-motion'
 // ============================================
 
 export function BrandingModule() {
-  const { branding, updateBranding } = useDashboardStore()
+  const { branding, updateBranding } = useDashboardStore(useShallow(state => ({ branding: state.branding, updateBranding: state.updateBranding })))
   const [formData, setFormData] = useState({
     logoUrl: branding.logoUrl,
     primaryColor: branding.primaryColor,
@@ -138,16 +140,14 @@ export function BrandingModule() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Company Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
             <Type className="w-5 h-5 text-purple-500" />
             Company Information
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Company Name</label>
@@ -169,20 +169,17 @@ export function BrandingModule() {
               />
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Colors */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
             <Palette className="w-5 h-5 text-purple-500" />
             Brand Colors
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Primary Color</label>
@@ -228,20 +225,17 @@ export function BrandingModule() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
             <ImageIcon className="w-5 h-5 text-purple-500" />
             Logo
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Upload Logo</label>
@@ -268,8 +262,8 @@ export function BrandingModule() {
               <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Preview</label>
               <div className="w-32 h-32 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
                 {formData.logoUrl ? (
-                  <img 
-                    src={formData.logoUrl} 
+                  <img
+                    src={formData.logoUrl}
                     alt="Logo Preview"
                     className="max-w-full max-h-full object-contain"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
@@ -280,20 +274,17 @@ export function BrandingModule() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Hero Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
             <Upload className="w-5 h-5 text-purple-500" />
             Hero Banner
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Upload Banner</label>
@@ -320,8 +311,8 @@ export function BrandingModule() {
               <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Preview</label>
               <div className="w-full h-32 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
                 {formData.heroBannerUrl ? (
-                  <img 
-                    src={formData.heroBannerUrl} 
+                  <img
+                    src={formData.heroBannerUrl}
                     alt="Banner Preview"
                     className="w-full h-full object-cover"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
@@ -335,27 +326,24 @@ export function BrandingModule() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Live Preview */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+      <div
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Live Preview</h2>
-        
+
         <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
-          <div 
+          <div
             className="h-16 flex items-center px-6"
             style={{ backgroundColor: formData.primaryColor }}
           >
             <div className="flex items-center gap-3">
               {formData.logoUrl && (
-                <img 
-                  src={formData.logoUrl} 
+                <img
+                  src={formData.logoUrl}
                   alt="Logo"
                   className="h-8 w-auto"
                   onError={(e) => { e.currentTarget.style.display = 'none' }}
@@ -364,11 +352,11 @@ export function BrandingModule() {
               <span className="text-white font-bold">{formData.companyName}</span>
             </div>
           </div>
-          
-          <div 
+
+          <div
             className="h-48 flex items-center justify-center relative"
-            style={{ 
-              background: formData.heroBannerUrl 
+            style={{
+              background: formData.heroBannerUrl
                 ? `url(${formData.heroBannerUrl}) center/cover`
                 : `linear-gradient(135deg, ${formData.primaryColor}, ${formData.secondaryColor})`
             }}
@@ -380,7 +368,7 @@ export function BrandingModule() {
             <div className="absolute inset-0 bg-black/30" />
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }
