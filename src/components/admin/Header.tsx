@@ -1,17 +1,19 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { Menu, Bell, Search, User } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 
 export function Header() {
-  const { toggleSidebar, searchQuery, setSearchQuery } = useDashboardStore()
+  const { toggleSidebar, searchQuery, setSearchQuery } = useDashboardStore(useShallow(state => ({ toggleSidebar: state.toggleSidebar, searchQuery: state.searchQuery, setSearchQuery: state.setSearchQuery })))
 
   return (
     <header className="h-16 bg-white dark:bg-gray-900 border-b dark:border-gray-800 flex items-center justify-between px-4">
       {/* Left Side */}
       <div className="flex items-center gap-4">
-        <button 
-          onClick={toggleSidebar} 
+        <button
+          onClick={toggleSidebar}
           className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -37,9 +39,9 @@ export function Header() {
           <div className="w-2 h-2 rounded-full bg-green-500"></div>
           <span className="text-sm text-gray-600 dark:text-gray-400">Online</span>
         </div>
-        
+
         <div className="hidden sm:block h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
-        
+
         {/* Notifications */}
         <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
           <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
