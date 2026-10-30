@@ -1,17 +1,15 @@
 'use client'
+import { WriteAccess } from './ui/WriteAccess'
 
 import { useShallow } from 'zustand/react/shallow'
 
 import { useState, useEffect } from 'react'
-import {
-  MapPin,
-  Search,
-  Edit,
-  Plus,
-  ExternalLink
-} from 'lucide-react'
+import { MapPin, Search, Edit, Plus, ExternalLink } from 'lucide-react'
 import { useDashboardStore, Outlet } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
+import { adminRequest } from '@/lib/admin-client'
+import { mapCoordinates } from '@/lib/map-coordinates'
+import { useAdminForm } from './ui/useAdminForm'
 
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input } from './ui/Field'
@@ -24,155 +22,197 @@ interface LocationFormProps {
   open: boolean
   outlet?: Outlet | null
   onClose: () => void
-  onSubmit: (data: Partial<Outlet>) => void
+  onSubmit: (data: Partial<Outlet>) => Promise<void>
 }
-
 function LocationForm({ open, outlet, onClose, onSubmit }: LocationFormProps) {
   const [formData, setFormData] = useState({
-    name: outlet?.name || '',
-    location: outlet?.location || '',
-    mapsUrl: outlet?.mapsUrl || ''
+    name: '',
+    location: '',
+    latitude: '' as string | number,
+    longitude: '' as string | number,
   })
-
-  // Update form when outlet prop changes (for edit mode)
+  const [link, setLink] = useState('')
+  const [mapError, setMapError] = useState('')
+  const { saving, error, submit } = useAdminForm(open, onClose)
   useEffect(() => {
+    if (!open) return
+    const parsed = mapCoordinates(outlet?.mapsUrl || '')
     setFormData({
       name: outlet?.name || '',
       location: outlet?.location || '',
-      mapsUrl: outlet?.mapsUrl || ''
+      latitude: outlet?.latitude ?? parsed?.latitude ?? '',
+      longitude: outlet?.longitude ?? parsed?.longitude ?? '',
     })
-  }, [outlet])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(formData)
-    onClose()
-  }
-
+    setLink('')
+    setMapError('')
+  }, [open, outlet])
   return (
     <Modal
       open={open}
+      busy={saving}
       onClose={onClose}
-      title={outlet ? 'Edit Location' : 'Add Location'}
-      description={outlet ? 'Perbarui lokasi outlet Anda.' : 'Tambahkan lokasi outlet baru.'}
+      title="Ubah lokasi outlet"
+      description="Perbarui alamat. Titik peta dapat ditambahkan jika diperlukan."
       icon={MapPin}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label="Location Name" required>
-            <Input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Grand Indonesia"
-              required
-            />
-          </Field>
-
-          <Field label="Address" required>
-            <Input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="e.g. Jl. M.H. Thamrin No. 1"
-              required
-            />
-          </Field>
-
-          <Field label="Pick Location on Map">
-            <div className="space-y-2">
-              <div className="relative w-full h-48 rounded-xl overflow-hidden border dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
-                <iframe
-                  id="map-embed"
-                  className="w-full h-full"
-                  src={formData.mapsUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126748.56398935027!2d106.698688671875!3d-6.208763868808566!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b5c7%3A0x2e69f5390917b5c7!2sJakarta!5e0!3m2!1sen!2sid!4v1620000000000!5m2!1sen!2sid"}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => window.open('https://www.google.com/maps', '_blank')}
-                className="w-full px-4 py-2.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
-              >
-                <MapPin className="w-4 h-4" />
-                Open Google Maps
-              </button>
-
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-line">
-                {`1. Klik tombol di atas untuk membuka Google Maps
-2. Cari lokasi yang diinginkan
-3. Klik Share -> Embed a map
-4. Salin URL src lalu tempel di bawah`}
-              </p>
-
+      <form
+        className="flex flex-1 flex-col overflow-hidden"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit(async () => {
+            if ((formData.latitude === '') !== (formData.longitude === ''))
+              throw new Error('Isi kedua koordinat atau kosongkan keduanya')
+            await onSubmit({
+              name: formData.name,
+              location: formData.location,
+              latitude: formData.latitude === '' ? null : Number(formData.latitude),
+              longitude: formData.longitude === '' ? null : Number(formData.longitude),
+            })
+          })
+        }}
+      >
+        {error && (
+          <p role="alert" className="mx-6 mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        <fieldset disabled={saving} className="contents">
+          <div className="space-y-4 overflow-y-auto px-6 py-5">
+            <Field label="Nama outlet" required>
               <Input
-                type="url"
-                value={formData.mapsUrl}
-                onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
-                placeholder="Paste Google Maps embed URL here..."
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
-            </div>
-          </Field>
-        </div>
-
-        <ModalFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
-          >
-            {outlet ? 'Update' : 'Create'}
-          </button>
-        </ModalFooter>
+            </Field>
+            <Field label="Alamat" required>
+              <Input
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+              />
+            </Field>
+            <details className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+              <summary className="cursor-pointer">Atur titik peta (opsional)</summary>
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-gray-500">
+                  Tempel URL lengkap Google Maps yang memuat koordinat. Untuk tautan pendek, buka
+                  dahulu di browser lalu salin URL lengkapnya.
+                </p>
+                <Input
+                  aria-label="Tautan Google Maps"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://www.google.com/maps/..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const point = mapCoordinates(link)
+                    if (!point) {
+                      setMapError(
+                        'Koordinat belum ditemukan. Gunakan URL lengkap Google Maps atau isi koordinat di bawah.'
+                      )
+                      return
+                    }
+                    setFormData({ ...formData, ...point })
+                    setMapError('')
+                  }}
+                  className="rounded-lg border px-3 py-2"
+                >
+                  Gunakan titik dari tautan
+                </button>
+                {mapError && (
+                  <p role="alert" className="text-xs text-red-600">
+                    {mapError}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Lintang">
+                    <Input
+                      type="number"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      value={formData.latitude}
+                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Bujur">
+                    <Input
+                      type="number"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      value={formData.longitude}
+                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+            </details>
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border py-2.5 text-sm"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 rounded-xl bg-purple-600 py-2.5 text-sm font-medium text-white"
+            >
+              {saving ? 'Menyimpan...' : 'Simpan perubahan'}
+            </button>
+          </ModalFooter>
+        </fieldset>
       </form>
     </Modal>
   )
 }
 
-// ============================================
-// Location Module Component
-// ============================================
-
 export function LocationModule() {
-  const { outlets, updateOutlet, searchQuery } = useDashboardStore(useShallow(state => ({ outlets: state.outlets, updateOutlet: state.updateOutlet, searchQuery: state.searchQuery })))
+  const { outlets, updateOutlet, searchQuery } = useDashboardStore(
+    useShallow((state) => ({
+      outlets: state.outlets,
+      updateOutlet: state.updateOutlet,
+      searchQuery: state.searchQuery,
+    }))
+  )
   const [showForm, setShowForm] = useState(false)
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null)
 
-  const filteredOutlets = outlets.filter(outlet =>
-    outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    outlet.location.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOutlets = outlets.filter(
+    (outlet) =>
+      outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      outlet.location.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleUpdate = async (data: Partial<Outlet>) => {
-    if (!editingOutlet) return
-    try {
-      const url = new URL(data.mapsUrl || '')
-      if (!['maps.google.com', 'www.google.com', 'google.com'].includes(url.hostname)) throw new Error('Gunakan URL Google Maps dengan koordinat')
-      const query = url.searchParams.get('q')?.split(',')
-      const lon = data.mapsUrl?.match(/!2d(-?[0-9.]+)/)?.[1]
-      const lat = data.mapsUrl?.match(/!3d(-?[0-9.]+)/)?.[1]
-      const latitude = Number(lat || query?.[0]); const longitude = Number(lon || query?.[1])
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error('Koordinat tidak ditemukan. Atur latitude dan longitude di menu Outlets.')
-      const response = await fetch(`/api/admin/outlets?id=${encodeURIComponent(editingOutlet.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: data.name, address: data.location, latitude, longitude }) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Gagal menyimpan lokasi')
-      await useDashboardStore.getState().refreshDashboard()
-      toast.success('Lokasi tersimpan')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal menyimpan lokasi') }
+    if (!editingOutlet) throw new Error('Pilih outlet terlebih dahulu')
+    await adminRequest(`/api/admin/outlets?id=${encodeURIComponent(editingOutlet.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: data.name,
+        address: data.location,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      }),
+    })
+    useDashboardStore.getState().updateOutlet(editingOutlet.id, {
+      ...data,
+      mapsUrl:
+        data.latitude != null && data.longitude != null
+          ? `https://maps.google.com/maps?q=${data.latitude},${data.longitude}&output=embed`
+          : '',
+    })
+    toast.success('Lokasi tersimpan')
   }
 
   const openMaps = (url: string) => {
-    window.open(url, '_blank')
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -180,8 +220,8 @@ export function LocationModule() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Locations</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage outlet locations and maps</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lokasi</h1>
+          <p className="text-gray-500 dark:text-gray-400">Atur alamat dan titik peta outlet.</p>
         </div>
       </div>
 
@@ -190,7 +230,7 @@ export function LocationModule() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
         <input
           type="text"
-          placeholder="Search locations..."
+          placeholder="Cari nama atau alamat lokasi..."
           value={searchQuery}
           onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -209,39 +249,43 @@ export function LocationModule() {
                 <MapPin className="w-5 h-5 text-purple-500" />
                 <h3 className="font-semibold text-gray-900 dark:text-white">{outlet.name}</h3>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                outlet.status === 'online'
-                  ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                  : outlet.status === 'offline'
-                  ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                  : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  outlet.status === 'online'
+                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    : outlet.status === 'offline'
+                      ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                }`}
+              >
                 {outlet.status}
               </span>
             </div>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {outlet.location}
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{outlet.location}</p>
 
             <div className="flex gap-2">
               <button
+                disabled={!outlet.mapsUrl}
+                title={outlet.mapsUrl ? 'Lihat titik peta' : 'Titik peta belum diatur'}
                 onClick={() => openMaps(outlet.mapsUrl)}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
                 <ExternalLink className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Open Map</span>
+                <span className="text-gray-900 dark:text-white">Lihat peta</span>
               </button>
-              <button
-                onClick={() => {
-                  setEditingOutlet(outlet)
-                  setShowForm(true)
-                }}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
-              >
-                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Edit</span>
-              </button>
+              <WriteAccess>
+                <button
+                  onClick={() => {
+                    setEditingOutlet(outlet)
+                    setShowForm(true)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
+                >
+                  <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Ubah</span>
+                </button>
+              </WriteAccess>
             </div>
           </div>
         ))}
@@ -251,7 +295,7 @@ export function LocationModule() {
       {filteredOutlets.length === 0 && (
         <div className="text-center py-12">
           <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">No locations found</p>
+          <p className="text-gray-500 dark:text-gray-400">Lokasi tidak ditemukan</p>
         </div>
       )}
 
