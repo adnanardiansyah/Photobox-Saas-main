@@ -1,4 +1,5 @@
 'use client'
+import { WriteAccess } from './ui/WriteAccess'
 
 import { useShallow } from 'zustand/react/shallow'
 
@@ -12,10 +13,12 @@ import {
   MessageSquare,
   ThumbsUp,
   ThumbsDown,
-  Loader2
+  Loader2,
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
+import { adminRequest } from '@/lib/admin-client'
+import { useAdminForm } from './ui/useAdminForm'
 
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input, Select, Textarea, Switch } from './ui/Field'
@@ -39,7 +42,7 @@ interface TestimonialFormProps {
   open: boolean
   testimonial?: TestimonialData | null
   onClose: () => void
-  onSubmit: (data: any) => void
+  onSubmit: (data: any) => Promise<void>
 }
 
 function TestimonialForm({ open, testimonial, onClose, onSubmit }: TestimonialFormProps) {
@@ -49,14 +52,16 @@ function TestimonialForm({ open, testimonial, onClose, onSubmit }: TestimonialFo
     message: testimonial?.message || '',
     rating: testimonial?.rating || 5,
     outletId: testimonial?.outletId || '',
-    isApproved: testimonial?.isApproved ?? false
+    isApproved: testimonial?.isApproved ?? false,
   })
 
   useEffect(() => {
     if (!open) return
     fetch('/api/admin/outlets?take=200')
-      .then(r => r.json())
-      .then(data => { if (data.success) setOutlets(data.data) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setOutlets(data.data)
+      })
       .catch(() => {})
   }, [open])
 
@@ -66,116 +71,133 @@ function TestimonialForm({ open, testimonial, onClose, onSubmit }: TestimonialFo
       message: testimonial?.message || '',
       rating: testimonial?.rating || 5,
       outletId: testimonial?.outletId || '',
-      isApproved: testimonial?.isApproved ?? false
+      isApproved: testimonial?.isApproved ?? false,
     })
-  }, [testimonial])
+  }, [testimonial, open])
 
+  const { saving, error, submit } = useAdminForm(open, onClose)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const payload: any = {
-      customerName: formData.customerName,
-      message: formData.message,
-      rating: formData.rating,
-      isApproved: formData.isApproved
-    }
-    if (formData.outletId) payload.outletId = formData.outletId
-    onSubmit(payload)
-    onClose()
+    void submit(async () => {
+      const payload: any = {
+        customerName: formData.customerName,
+        message: formData.message,
+        rating: formData.rating,
+        isApproved: formData.isApproved,
+      }
+      if (formData.outletId) payload.outletId = formData.outletId
+      await onSubmit(payload)
+    })
   }
 
   return (
     <Modal
+      busy={saving}
       open={open}
       onClose={onClose}
-      title={testimonial ? 'Edit Testimonial' : 'Add Testimonial'}
-      description={testimonial ? 'Perbarui ulasan customer.' : 'Tambahkan ulasan customer baru.'}
+      title={testimonial ? 'Ubah testimoni' : 'Tambah testimoni'}
+      description={testimonial ? 'Perbarui ulasan pelanggan.' : 'Tambahkan ulasan pelanggan baru.'}
       icon={MessageSquare}
     >
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label="Customer Name" required>
-            <Input
-              type="text"
-              value={formData.customerName}
-              onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              placeholder="e.g. Rina Kartika"
-              required
-            />
-          </Field>
+        {error && (
+          <p
+            role="alert"
+            className="mx-6 mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300"
+          >
+            {error}
+          </p>
+        )}
+        <fieldset disabled={saving} className="contents">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <Field label="Nama pelanggan" required>
+              <Input
+                type="text"
+                value={formData.customerName}
+                onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                placeholder="e.g. Rina Kartika"
+                required
+              />
+            </Field>
 
-          <Field label="Outlet">
-            <Select
-              value={formData.outletId}
-              onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
+            <Field label="Outlet">
+              <Select
+                value={formData.outletId}
+                onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
+              >
+                <option value="">Pilih outlet</option>
+                {outlets.map((outlet) => (
+                  <option key={outlet.id} value={outlet.id}>
+                    {outlet.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Penilaian" required>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, rating: star })}
+                    className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Star
+                      className={`w-6 h-6 ${
+                        star <= formData.rating
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Pesan" required>
+              <Textarea
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                rows={4}
+                placeholder="Tulis ulasan pelanggan..."
+                required
+              />
+            </Field>
+
+            <Switch
+              checked={formData.isApproved}
+              onChange={(checked) => setFormData({ ...formData, isApproved: checked })}
+              label="Disetujui"
+              description="Ulasan yang disetujui tampil di halaman publik."
+            />
+          </div>
+
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
             >
-              <option value="">Select Outlet</option>
-              {outlets.map((outlet) => (
-                <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Rating" required>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, rating: star })}
-                  className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Star
-                    className={`w-6 h-6 ${
-                      star <= formData.rating
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-300 dark:text-gray-600'
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          <Field label="Message" required>
-            <Textarea
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              rows={4}
-              placeholder="Pesan ulasan dari customer..."
-              required
-            />
-          </Field>
-
-          <Switch
-            checked={formData.isApproved}
-            onChange={(checked) => setFormData({ ...formData, isApproved: checked })}
-            label="Approved"
-            description="Ulasan yang disetujui tampil di halaman publik."
-          />
-        </div>
-
-        <ModalFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
-          >
-            {testimonial ? 'Update' : 'Create'}
-          </button>
-        </ModalFooter>
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
+            >
+              {saving ? 'Menyimpan...' : testimonial ? 'Simpan perubahan' : 'Simpan'}
+            </button>
+          </ModalFooter>
+        </fieldset>
       </form>
     </Modal>
   )
 }
 
 export function TestimonialModule() {
-  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
+  const { searchQuery } = useDashboardStore(
+    useShallow((state) => ({ searchQuery: state.searchQuery }))
+  )
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([])
   const [outlets, setOutlets] = useState<OutletOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -189,9 +211,9 @@ export function TestimonialModule() {
       const res = await fetch('/api/admin/testimonials')
       const data = await res.json()
       if (data.success) setTestimonials(data.data)
-      else toast.error('Failed to load testimonials')
+      else toast.error('Daftar testimoni belum dapat dimuat. Coba muat ulang menu.')
     } catch {
-      toast.error('Failed to load testimonials')
+      toast.error('Daftar testimoni belum dapat dimuat. Coba muat ulang menu.')
     } finally {
       setLoading(false)
     }
@@ -211,99 +233,88 @@ export function TestimonialModule() {
   }, [])
 
   const handleCreate = async (formData: any) => {
-    const res = await fetch('/api/admin/testimonials', {
+    await adminRequest('/api/admin/testimonials', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     })
-    const data = await res.json()
-    if (data.success) {
-      toast.success('Testimonial created successfully!')
-      fetchTestimonials()
-    } else {
-      toast.error(data.error || 'Failed to create testimonial')
-    }
+    toast.success('Data berhasil ditambahkan')
+    void fetchTestimonials()
   }
-
   const handleUpdate = async (formData: any) => {
-    if (!editingTestimonial) return
-    const res = await fetch(`/api/admin/testimonials?id=${editingTestimonial.id}`, {
+    if (!editingTestimonial) throw new Error('Pilih data yang akan diubah')
+    await adminRequest(`/api/admin/testimonials?id=${encodeURIComponent(editingTestimonial.id)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     })
-    const data = await res.json()
-    if (data.success) {
-      toast.success('Testimonial updated successfully!')
-      fetchTestimonials()
-    } else {
-      toast.error(data.error || 'Failed to update testimonial')
-    }
+    toast.success('Perubahan berhasil disimpan')
+    void fetchTestimonials()
   }
 
+  const [deleting, setDeleting] = useState(false)
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/admin/testimonials?id=${id}`, { method: 'DELETE' })
-    const data = await res.json()
-    if (data.success) {
-      toast.success('Testimonial deleted successfully!')
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await adminRequest(`/api/admin/testimonials?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+      toast.success('Data berhasil dihapus')
       setDeleteConfirm(null)
-      fetchTestimonials()
-    } else {
-      toast.error(data.error || 'Failed to delete testimonial')
+      void fetchTestimonials()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menghapus data')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleApprove = async (id: string) => {
-    const res = await fetch(`/api/admin/testimonials?id=${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isApproved: true })
-    })
-    const data = await res.json()
-    if (data.success) {
-      toast.success('Testimonial approved!')
-      fetchTestimonials()
-    } else {
-      toast.error(data.error || 'Failed to approve testimonial')
+    try {
+      await adminRequest(`/api/admin/testimonials?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isApproved: true }),
+      })
+      toast.success('Testimoni disetujui')
+      void fetchTestimonials()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyetujui testimoni')
     }
   }
-
   const handleReject = async (id: string) => {
-    const res = await fetch(`/api/admin/testimonials?id=${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isApproved: false })
-    })
-    const data = await res.json()
-    if (data.success) {
-      toast.success('Testimonial rejected!')
-      fetchTestimonials()
-    } else {
-      toast.error(data.error || 'Failed to reject testimonial')
+    try {
+      await adminRequest(`/api/admin/testimonials?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isApproved: false }),
+      })
+      toast.success('Persetujuan testimoni dibatalkan')
+      void fetchTestimonials()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memperbarui testimoni')
     }
   }
 
-  const filteredTestimonials = testimonials.filter(testimonial => {
+  const filteredTestimonials = testimonials.filter((testimonial) => {
     const matchesSearch =
       testimonial.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       testimonial.message.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = filterStatus === 'all' ||
+    const matchesStatus =
+      filterStatus === 'all' ||
       (filterStatus === 'approved' && testimonial.isApproved) ||
       (filterStatus === 'pending' && !testimonial.isApproved)
     return matchesSearch && matchesStatus
   })
 
   const getOutletName = (outletId: string | null) => {
-    if (!outletId) return 'Unknown Outlet'
-    const outlet = outlets.find(o => o.id === outletId)
-    return outlet?.name || 'Unknown Outlet'
+    if (!outletId) return 'Outlet tidak diketahui'
+    const outlet = outlets.find((o) => o.id === outletId)
+    return outlet?.name || 'Outlet tidak diketahui'
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     })
   }
 
@@ -319,16 +330,20 @@ export function TestimonialModule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Testimonials</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage customer testimonials and reviews</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Testimoni</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Kelola ulasan pelanggan dan persetujuan tampil di halaman publik.
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Testimonial
-        </button>
+        <WriteAccess>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah testimoni
+          </button>
+        </WriteAccess>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -336,7 +351,7 @@ export function TestimonialModule() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
           <input
             type="text"
-            placeholder="Search testimonials..."
+            placeholder="Cari nama pelanggan atau pesan..."
             value={searchQuery}
             onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -347,9 +362,9 @@ export function TestimonialModule() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          <option value="all">All Status</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Pending</option>
+          <option value="all">Semua status</option>
+          <option value="approved">Disetujui</option>
+          <option value="pending">Menunggu persetujuan</option>
         </select>
       </div>
 
@@ -362,14 +377,18 @@ export function TestimonialModule() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-purple-500" />
-                <span className="font-semibold text-gray-900 dark:text-white">{testimonial.customerName}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {testimonial.customerName}
+                </span>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                testimonial.isApproved
-                  ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
-              }`}>
-                {testimonial.isApproved ? 'Approved' : 'Pending'}
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  testimonial.isApproved
+                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                }`}
+              >
+                {testimonial.isApproved ? 'Disetujui' : 'Menunggu persetujuan'}
               </span>
             </div>
 
@@ -397,40 +416,48 @@ export function TestimonialModule() {
 
             <div className="flex gap-2">
               {!testimonial.isApproved && (
-                <button
-                  onClick={() => handleApprove(testimonial.id)}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 text-sm"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  Approve
-                </button>
+                <WriteAccess>
+                  <button
+                    onClick={() => handleApprove(testimonial.id)}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 text-sm"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                    Setujui
+                  </button>
+                </WriteAccess>
               )}
               {testimonial.isApproved && (
-                <button
-                  onClick={() => handleReject(testimonial.id)}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-sm"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  Reject
-                </button>
+                <WriteAccess>
+                  <button
+                    onClick={() => handleReject(testimonial.id)}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-sm"
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                    Batalkan persetujuan
+                  </button>
+                </WriteAccess>
               )}
-              <button
-                onClick={() => {
-                  setEditingTestimonial(testimonial)
-                  setShowForm(true)
-                }}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
-              >
-                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Edit</span>
-              </button>
-              <button
-                onClick={() => setDeleteConfirm(testimonial.id)}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
-              >
-                <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Delete</span>
-              </button>
+              <WriteAccess>
+                <button
+                  onClick={() => {
+                    setEditingTestimonial(testimonial)
+                    setShowForm(true)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
+                >
+                  <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Ubah</span>
+                </button>
+              </WriteAccess>
+              <WriteAccess>
+                <button
+                  onClick={() => setDeleteConfirm(testimonial.id)}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
+                >
+                  <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Hapus</span>
+                </button>
+              </WriteAccess>
             </div>
           </div>
         ))}
@@ -438,7 +465,7 @@ export function TestimonialModule() {
 
       {filteredTestimonials.length === 0 && !loading && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No testimonials found</p>
+          <p className="text-gray-500 dark:text-gray-400">Testimoni tidak ditemukan</p>
         </div>
       )}
 
@@ -454,10 +481,11 @@ export function TestimonialModule() {
 
       {/* Delete confirmation */}
       <Modal
+        busy={deleting}
         open={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
-        title="Delete Testimonial?"
-        description="This action cannot be undone. Are you sure you want to delete this testimonial?"
+        title="Hapus testimoni?"
+        description="Testimoni ini akan dihapus permanen. Lanjutkan?"
         icon={Trash2}
         size="sm"
       >
@@ -466,15 +494,17 @@ export function TestimonialModule() {
             type="button"
             onClick={() => setDeleteConfirm(null)}
             className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+            disabled={deleting}
           >
-            Cancel
+            Batal
           </button>
           <button
             type="button"
             onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
             className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+            disabled={deleting}
           >
-            Delete
+            Hapus
           </button>
         </div>
       </Modal>
