@@ -95,6 +95,9 @@ export interface BoothStatus {
 // ============================================
 
 interface DashboardState {
+  refreshDashboard: () => Promise<void>
+  refreshPublic: () => Promise<void>
+  photosToday: number
   // Data
   outlets: Outlet[]
   templates: Template[]
@@ -149,217 +152,10 @@ interface DashboardState {
 }
 
 // ============================================
-// Mock Data
+// Default branding
 // ============================================
 
-const mockOutlets: Outlet[] = [
-  {
-    id: '1',
-    name: 'Mall Kelapa Gading',
-    location: 'Jakarta Utara',
-    mapsUrl: 'https://maps.google.com/?q=-6.1588,106.9056',
-    status: 'online',
-    features: { qris: true, voucher: true, cashless: true },
-    lastHeartbeat: new Date().toISOString(),
-    createdAt: '2024-01-15T10:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Grand Indonesia',
-    location: 'Jakarta Pusat',
-    mapsUrl: 'https://maps.google.com/?q=-6.1944,106.8229',
-    status: 'online',
-    features: { qris: true, voucher: true, cashless: true },
-    lastHeartbeat: new Date().toISOString(),
-    createdAt: '2024-01-20T10:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Senayan City',
-    location: 'Jakarta Selatan',
-    mapsUrl: 'https://maps.google.com/?q=-6.2297,106.7983',
-    status: 'offline',
-    features: { qris: true, voucher: false, cashless: true },
-    lastHeartbeat: new Date(Date.now() - 3600000).toISOString(),
-    createdAt: '2024-02-01T10:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Pacific Place',
-    location: 'Jakarta Selatan',
-    mapsUrl: 'https://maps.google.com/?q=-6.2261,106.8092',
-    status: 'error',
-    features: { qris: true, voucher: true, cashless: false },
-    lastHeartbeat: new Date(Date.now() - 1800000).toISOString(),
-    createdAt: '2024-02-10T10:00:00Z'
-  }
-]
-
-const mockTemplates: Template[] = [
-  {
-    id: '1',
-    name: 'Classic 4R Frame',
-    category: '4R',
-    imageUrl: '/templates/classic-4r.png',
-    price: 15000,
-    isActive: true,
-    createdAt: '2024-01-10T10:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Modern A4 Newspaper',
-    category: 'A4 Newspaper',
-    imageUrl: '/templates/modern-a4.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-01-15T10:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Animated GIF Frame',
-    category: 'GIF',
-    imageUrl: '/templates/animated-gif.gif',
-    price: 35000,
-    isActive: true,
-    createdAt: '2024-02-01T10:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Korean Style',
-    category: 'Custom',
-    imageUrl: '/photos/frame-korean-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  },
-  {
-    id: '5',
-    name: 'Natural',
-    category: 'Custom',
-    imageUrl: '/photos/frame-nature-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  },
-  {
-    id: '6',
-    name: 'Night Sky',
-    category: 'Custom',
-    imageUrl: '/photos/frame-night-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  },
-  {
-    id: '7',
-    name: 'Floral',
-    category: 'Custom',
-    imageUrl: '/photos/frame-floral-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  },
-  {
-    id: '8',
-    name: 'Beach',
-    category: 'Custom',
-    imageUrl: '/photos/frame-beach-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  },
-  {
-    id: '9',
-    name: 'Retro',
-    category: 'Custom',
-    imageUrl: '/photos/frame-retro-1200x1800.png',
-    price: 25000,
-    isActive: true,
-    createdAt: '2024-06-01T10:00:00Z'
-  }
-]
-
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@snapnext.com',
-    role: 'owner',
-    status: 'active',
-    createdAt: '2024-01-01T10:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@snapnext.com',
-    role: 'manager',
-    outletId: '1',
-    status: 'active',
-    createdAt: '2024-01-10T10:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Bob Wilson',
-    email: 'bob@snapnext.com',
-    role: 'staff',
-    outletId: '2',
-    status: 'active',
-    createdAt: '2024-01-15T10:00:00Z'
-  }
-]
-
-const mockVouchers: Voucher[] = [
-  {
-    id: '1',
-    code: 'WELCOME2024',
-    discountType: 'percentage',
-    discountValue: 20,
-    minPurchase: 50000,
-    maxDiscount: 25000,
-    usageLimit: 100,
-    usedCount: 45,
-    validFrom: '2024-01-01T00:00:00Z',
-    validUntil: '2024-12-31T23:59:59Z',
-    isActive: true,
-    createdAt: '2024-01-01T10:00:00Z'
-  },
-  {
-    id: '2',
-    code: 'HOLIDAY50K',
-    discountType: 'fixed',
-    discountValue: 50000,
-    minPurchase: 100000,
-    usageLimit: 50,
-    usedCount: 12,
-    validFrom: '2024-06-01T00:00:00Z',
-    validUntil: '2024-08-31T23:59:59Z',
-    isActive: true,
-    createdAt: '2024-05-15T10:00:00Z'
-  }
-]
-
-const mockTestimonials: Testimonial[] = [
-  {
-    id: '1',
-    customerName: 'Sarah Johnson',
-    rating: 5,
-    comment: 'Amazing photo booth experience! The quality was outstanding.',
-    outletId: '1',
-    isApproved: true,
-    createdAt: '2024-02-15T10:00:00Z'
-  },
-  {
-    id: '2',
-    customerName: 'Michael Chen',
-    rating: 4,
-    comment: 'Great service and fun props. Will definitely come back!',
-    outletId: '2',
-    isApproved: true,
-    createdAt: '2024-02-20T10:00:00Z'
-  }
-]
-
-const mockBranding: Branding = {
+const defaultBranding: Branding = {
   logoUrl: '',
   primaryColor: '#a855f7',
   secondaryColor: '#ec4899',
@@ -367,72 +163,6 @@ const mockBranding: Branding = {
   companyName: 'SnapNext',
   tagline: 'Capture Your Moments'
 }
-
-const mockTransactions: Transaction[] = [
-  {
-    id: 'TRX001',
-    outletId: '1',
-    amount: 50000,
-    status: 'success',
-    paymentMethod: 'QRIS',
-    createdAt: new Date(Date.now() - 120000).toISOString()
-  },
-  {
-    id: 'TRX002',
-    outletId: '2',
-    amount: 75000,
-    status: 'pending',
-    paymentMethod: 'Cash',
-    createdAt: new Date(Date.now() - 300000).toISOString()
-  },
-  {
-    id: 'TRX003',
-    outletId: '3',
-    amount: 25000,
-    status: 'success',
-    paymentMethod: 'QRIS',
-    createdAt: new Date(Date.now() - 600000).toISOString()
-  },
-  {
-    id: 'TRX004',
-    outletId: '4',
-    amount: 100000,
-    status: 'success',
-    paymentMethod: 'Card',
-    createdAt: new Date(Date.now() - 900000).toISOString()
-  }
-]
-
-const mockBoothStatuses: BoothStatus[] = [
-  {
-    id: '1',
-    name: 'Booth #1 - Kelapa Gading',
-    outletId: '1',
-    status: 'online',
-    lastPhoto: new Date(Date.now() - 120000).toISOString()
-  },
-  {
-    id: '2',
-    name: 'Booth #2 - Grand Indonesia',
-    outletId: '2',
-    status: 'online',
-    lastPhoto: new Date(Date.now() - 300000).toISOString()
-  },
-  {
-    id: '3',
-    name: 'Booth #3 - Senayan City',
-    outletId: '3',
-    status: 'offline',
-    lastPhoto: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: '4',
-    name: 'Booth #4 - Pacific Place',
-    outletId: '4',
-    status: 'error',
-    lastPhoto: new Date(Date.now() - 1800000).toISOString()
-  }
-]
 
 // ============================================
 // Helper Functions
@@ -456,15 +186,28 @@ function generateVoucherCode(): string {
 // ============================================
 
 export const useDashboardStore = create<DashboardState>((set) => ({
+  photosToday: 0,
+  refreshDashboard: async () => {
+    const response = await fetch('/api/admin/dashboard')
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.error || 'Gagal memuat dashboard')
+    set(result.data)
+  },
+  refreshPublic: async () => {
+    const response = await fetch('/api/public/site')
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.error || 'Gagal memuat data situs')
+    set(result.data)
+  },
   // Initial Data
-  outlets: mockOutlets,
-  templates: mockTemplates,
-  users: mockUsers,
-  vouchers: mockVouchers,
-  testimonials: mockTestimonials,
-  branding: mockBranding,
-  transactions: mockTransactions,
-  boothStatuses: mockBoothStatuses,
+  outlets: [],
+  templates: [],
+  users: [],
+  vouchers: [],
+  testimonials: [],
+  branding: defaultBranding,
+  transactions: [],
+  boothStatuses: [],
   
   // Initial UI State
   darkMode: false,
