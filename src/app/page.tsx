@@ -230,6 +230,30 @@ export default function HomePage() {
             </motion.div>
           </div>
         </div>
+        {/* Decorative waves stay inside the hero's existing bottom padding. */}
+        <div className="hero-waves" aria-hidden="true">
+          <svg className="hero-wave hero-wave-back" viewBox="0 0 2880 120" preserveAspectRatio="none" focusable="false">
+            <path fill="#A855F7" d="M0 60 C240 0 480 0 720 60 S1200 120 1440 60 C1680 0 1920 0 2160 60 S2640 120 2880 60 V120 H0Z" />
+          </svg>
+          <svg className="hero-wave hero-wave-middle" viewBox="0 0 2880 120" preserveAspectRatio="none" focusable="false">
+            <defs>
+              <linearGradient id="hero-wave-colors" x1="0" y1="0" x2="0" y2="1">
+                <stop stopColor="#C084FC" />
+                <stop offset="1" stopColor="#EC4899" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#hero-wave-colors)" d="M0 60 C240 0 480 0 720 60 S1200 120 1440 60 C1680 0 1920 0 2160 60 S2640 120 2880 60 V120 H0Z" />
+          </svg>
+          <svg className="hero-wave hero-wave-front" viewBox="0 0 2880 120" preserveAspectRatio="none" focusable="false">
+            <defs>
+              <linearGradient id="hero-wave-surface" x1="0" y1="0" x2="0" y2="1">
+                <stop stopColor="#FAF7FF" />
+                <stop offset="1" stopColor="#FFFFFF" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#hero-wave-surface)" d="M0 60 C240 0 480 0 720 60 S1200 120 1440 60 C1680 0 1920 0 2160 60 S2640 120 2880 60 V120 H0Z" />
+          </svg>
+        </div>
       </section>
 
       {/* Live Stats Section */}
