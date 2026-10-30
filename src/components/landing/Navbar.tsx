@@ -2,14 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { 
-  Camera, 
-  ChevronDown,
-  Menu,
-  X,
-  LayoutDashboard,
-  Zap
-} from 'lucide-react'
+import { Camera, ChevronDown, Menu, X, LayoutDashboard, Zap } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -45,18 +39,21 @@ function MagneticNavLink({
   const [spotPos, setSpotPos] = useState({ x: 50, y: 50 })
   const [hovered, setHovered] = useState(false)
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    const rect = ref.current?.getBoundingClientRect()
-    if (!rect) return
-    const x = e.clientX - rect.left - rect.width / 2
-    const y = e.clientY - rect.top - rect.height / 2
-    mouseX.set(x * 0.4)
-    mouseY.set(y * 0.4)
-    setSpotPos({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    })
-  }, [mouseX, mouseY])
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      const rect = ref.current?.getBoundingClientRect()
+      if (!rect) return
+      const x = e.clientX - rect.left - rect.width / 2
+      const y = e.clientY - rect.top - rect.height / 2
+      mouseX.set(x * 0.4)
+      mouseY.set(y * 0.4)
+      setSpotPos({
+        x: ((e.clientX - rect.left) / rect.width) * 100,
+        y: ((e.clientY - rect.top) / rect.height) * 100,
+      })
+    },
+    [mouseX, mouseY]
+  )
 
   const handleMouseLeave = useCallback(() => {
     mouseX.set(0)
@@ -223,7 +220,12 @@ function DropdownItem({
 // Navbar Component — Full Premium
 // ============================================
 export function Navbar() {
-  useEffect(() => { useDashboardStore.getState().refreshPublic().catch(() => {}) }, [])
+  useEffect(() => {
+    useDashboardStore
+      .getState()
+      .refreshPublic()
+      .catch(() => {})
+  }, [])
 
   const { branding } = useDashboardStore()
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false)
@@ -240,7 +242,9 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  useEffect(() => { setActiveLink(window.location.pathname) }, [])
+  useEffect(() => {
+    setActiveLink(window.location.pathname)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -254,9 +258,9 @@ export function Navbar() {
   }, [])
 
   const navLinks = [
-    { href: '/',             label: 'Home'         },
-    { href: '/pricing',      label: 'Pricing'      },
-    { href: '/locations',    label: 'Locations'    },
+    { href: '/', label: 'Home' },
+    { href: '/pricing', label: 'Pricing' },
+    { href: '/locations', label: 'Locations' },
     { href: '/testimonials', label: 'Testimonials' },
   ]
 
@@ -285,20 +289,20 @@ export function Navbar() {
 
   const dropdownItems = [
     {
-      href:      '/admin/login',
-      icon:      LayoutDashboard,
-      iconBg:    `${branding.primaryColor}18`,
+      href: '/admin/login',
+      icon: LayoutDashboard,
+      iconBg: `${branding.primaryColor}18`,
       iconColor: branding.primaryColor,
-      title:     'Admin / Owner',
-      subtitle:  'Dashboard & Management',
+      title: 'Admin / Owner',
+      subtitle: 'Dashboard & Management',
     },
     {
-      href:      '/booth/login',
-      icon:      Camera,
-      iconBg:    `${branding.secondaryColor}18`,
+      href: '/booth/login',
+      icon: Camera,
+      iconBg: `${branding.secondaryColor}18`,
       iconColor: branding.secondaryColor,
-      title:     'Booth / Outlet',
-      subtitle:  'Photo Session Interface',
+      title: 'Booth / Outlet',
+      subtitle: 'Photo Session Interface',
     },
   ]
 
@@ -306,15 +310,14 @@ export function Navbar() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
-        background:          scrolled ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0)',
-        backdropFilter:      scrolled ? 'blur(18px) saturate(200%)' : 'none',
-        WebkitBackdropFilter:scrolled ? 'blur(18px) saturate(200%)' : 'none',
-        borderBottom:        scrolled ? `1px solid ${branding.primaryColor}18` : '1px solid transparent',
-        boxShadow:           scrolled ? '0 4px 30px rgba(0,0,0,0.07)' : 'none',
+        background: scrolled ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0)',
+        backdropFilter: scrolled ? 'blur(18px) saturate(200%)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(18px) saturate(200%)' : 'none',
+        borderBottom: scrolled ? `1px solid ${branding.primaryColor}18` : '1px solid transparent',
+        boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.07)' : 'none',
       }}
     >
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-
         {/* ── Logo ──────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -322,34 +325,12 @@ export function Navbar() {
           transition={{ duration: 0.5, ease }}
         >
           <a href="/" className="flex items-center gap-2.5 group">
-            {branding.logoUrl ? (
-              <img
-                src={branding.logoUrl}
-                alt={branding.companyName}
-                className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
-              />
-            ) : (
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 8 }}
-                transition={{ type: 'spring', stiffness: 280, damping: 16 }}
-                className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
-                style={{ background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})` }}
-              >
-                <Camera className="w-5 h-5 text-white" />
-              </motion.div>
-            )}
-            <motion.span
-              className="text-xl font-bold"
-              whileHover={{ letterSpacing: '0.01em' }}
-              transition={{ duration: 0.2 }}
-              style={{
-                background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {branding.companyName}
-            </motion.span>
+            <BrandLogo
+              logoUrl={branding.logoUrl}
+              companyName={branding.companyName}
+              tone="light"
+              className="h-10 w-auto max-w-[9rem] sm:max-w-[11rem]"
+            />
           </a>
         </motion.div>
 
@@ -386,8 +367,8 @@ export function Navbar() {
               {featuresDropdownOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -12, scale: 0.93, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, y: 0,   scale: 1,    filter: 'blur(0px)' }}
-                  exit={{   opacity: 0, y: -8,   scale: 0.93, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -8, scale: 0.93, filter: 'blur(4px)' }}
                   transition={{ duration: 0.22, ease }}
                   className="absolute left-1/2 -translate-x-1/2 mt-2.5 w-[580px] bg-white rounded-2xl overflow-hidden"
                   style={{
@@ -399,7 +380,9 @@ export function Navbar() {
                   {/* Gradient top stripe */}
                   <div
                     className="h-1 w-full"
-                    style={{ background: `linear-gradient(90deg, ${branding.primaryColor}, ${branding.secondaryColor})` }}
+                    style={{
+                      background: `linear-gradient(90deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
+                    }}
                   />
 
                   <div className="p-4">
@@ -408,7 +391,10 @@ export function Navbar() {
                         <a
                           key={feat.title}
                           href="/features"
-                          onClick={() => { setActiveLink('/features'); setFeaturesDropdownOpen(false) }}
+                          onClick={() => {
+                            setActiveLink('/features')
+                            setFeaturesDropdownOpen(false)
+                          }}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
                         >
                           <div className="w-16 h-12 rounded-lg overflow-hidden flex-shrink-0">
@@ -428,9 +414,15 @@ export function Navbar() {
 
                     <a
                       href="/features"
-                      onClick={() => { setActiveLink('/features'); setFeaturesDropdownOpen(false) }}
+                      onClick={() => {
+                        setActiveLink('/features')
+                        setFeaturesDropdownOpen(false)
+                      }}
                       className="mt-3 block text-center py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                      style={{ backgroundColor: `${branding.primaryColor}10`, color: branding.primaryColor }}
+                      style={{
+                        backgroundColor: `${branding.primaryColor}10`,
+                        color: branding.primaryColor,
+                      }}
                     >
                       Lihat Semua Fitur →
                     </a>
@@ -477,9 +469,15 @@ export function Navbar() {
               <motion.span
                 className="absolute inset-0 pointer-events-none"
                 animate={{ x: loginDropdownOpen ? '200%' : '-100%' }}
-                transition={{ duration: 0.7, ease: 'linear', repeat: loginDropdownOpen ? 0 : Infinity, repeatDelay: 2 }}
+                transition={{
+                  duration: 0.7,
+                  ease: 'linear',
+                  repeat: loginDropdownOpen ? 0 : Infinity,
+                  repeatDelay: 2,
+                }}
                 style={{
-                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%)',
+                  background:
+                    'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%)',
                   width: '100%',
                 }}
               />
@@ -499,8 +497,8 @@ export function Navbar() {
               {loginDropdownOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -12, scale: 0.93, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, y: 0,   scale: 1,    filter: 'blur(0px)' }}
-                  exit={{   opacity: 0, y: -8,   scale: 0.93, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -8, scale: 0.93, filter: 'blur(4px)' }}
                   transition={{ duration: 0.22, ease }}
                   className="absolute right-0 mt-2.5 w-64 bg-white rounded-2xl overflow-hidden"
                   style={{
@@ -512,7 +510,9 @@ export function Navbar() {
                   {/* Gradient top stripe */}
                   <div
                     className="h-1 w-full"
-                    style={{ background: `linear-gradient(90deg, ${branding.primaryColor}, ${branding.secondaryColor})` }}
+                    style={{
+                      background: `linear-gradient(90deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
+                    }}
                   />
 
                   {/* Role hint label */}
@@ -543,7 +543,11 @@ export function Navbar() {
                   >
                     <p className="text-[11px] text-gray-400 text-center">
                       Butuh bantuan?{' '}
-                      <a href="/contact" className="font-semibold" style={{ color: branding.primaryColor }}>
+                      <a
+                        href="/contact"
+                        className="font-semibold"
+                        style={{ color: branding.primaryColor }}
+                      >
                         Hubungi kami
                       </a>
                     </p>
@@ -565,8 +569,8 @@ export function Navbar() {
                 <motion.span
                   key="close"
                   initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
-                  animate={{ rotate: 0,   opacity: 1, scale: 1   }}
-                  exit={{   rotate: 90,  opacity: 0, scale: 0.6 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
                   transition={{ duration: 0.2 }}
                 >
                   <X className="w-6 h-6 text-gray-700" />
@@ -574,9 +578,9 @@ export function Navbar() {
               ) : (
                 <motion.span
                   key="menu"
-                  initial={{ rotate: 90,  opacity: 0, scale: 0.6 }}
-                  animate={{ rotate: 0,   opacity: 1, scale: 1   }}
-                  exit={{   rotate: -90, opacity: 0, scale: 0.6 }}
+                  initial={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: -90, opacity: 0, scale: 0.6 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Menu className="w-6 h-6 text-gray-700" />
@@ -593,7 +597,7 @@ export function Navbar() {
           <motion.div
             initial={{ opacity: 0, height: 0, filter: 'blur(6px)' }}
             animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }}
-            exit={{   opacity: 0, height: 0,      filter: 'blur(6px)' }}
+            exit={{ opacity: 0, height: 0, filter: 'blur(6px)' }}
             transition={{ duration: 0.32, ease }}
             className="md:hidden overflow-hidden bg-white/96 backdrop-blur-2xl border-t"
             style={{ borderColor: `${branding.primaryColor}14` }}
@@ -604,15 +608,19 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   initial={{ opacity: 0, x: -20, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, x: 0,   filter: 'blur(0px)' }}
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                   transition={{ delay: i * 0.055, duration: 0.3, ease }}
                   whileHover={{ x: 4 }}
                   className="relative flex items-center justify-between px-4 py-3 rounded-xl font-medium text-sm overflow-hidden group"
                   style={{
-                    color:           activeLink === link.href ? branding.primaryColor : '#374151',
-                    backgroundColor: activeLink === link.href ? `${branding.primaryColor}10` : undefined,
+                    color: activeLink === link.href ? branding.primaryColor : '#374151',
+                    backgroundColor:
+                      activeLink === link.href ? `${branding.primaryColor}10` : undefined,
                   }}
-                  onClick={() => { setActiveLink(link.href); setMobileMenuOpen(false) }}
+                  onClick={() => {
+                    setActiveLink(link.href)
+                    setMobileMenuOpen(false)
+                  }}
                 >
                   {/* Hover sweep */}
                   <motion.span
@@ -647,11 +655,18 @@ export function Navbar() {
                     <a
                       key={feat.title}
                       href="/features"
-                      onClick={() => { setActiveLink('/features'); setMobileMenuOpen(false) }}
+                      onClick={() => {
+                        setActiveLink('/features')
+                        setMobileMenuOpen(false)
+                      }}
                       className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
                     >
                       <div className="w-10 h-8 rounded-lg overflow-hidden flex-shrink-0">
-                        <img src={feat.image} alt={feat.title} className="w-full h-full object-cover" />
+                        <img
+                          src={feat.image}
+                          alt={feat.title}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <span className="text-xs font-medium text-gray-700">{feat.title}</span>
                     </a>
@@ -662,7 +677,7 @@ export function Navbar() {
               {/* Mobile login shortcuts */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1,  y: 0  }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: navLinks.length * 0.055 + 0.06, duration: 0.3, ease }}
                 className="mt-2 pt-2.5 border-t grid grid-cols-2 gap-2"
                 style={{ borderColor: `${branding.primaryColor}14` }}
@@ -671,7 +686,10 @@ export function Navbar() {
                   href="/admin/login"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors hover:bg-gray-50"
-                  style={{ borderColor: `${branding.primaryColor}30`, color: branding.primaryColor }}
+                  style={{
+                    borderColor: `${branding.primaryColor}30`,
+                    color: branding.primaryColor,
+                  }}
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
                   Admin
@@ -680,7 +698,9 @@ export function Navbar() {
                   href="/booth/login"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                  style={{ background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})` }}
+                  style={{
+                    background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
+                  }}
                 >
                   <Camera className="w-3.5 h-3.5" />
                   Booth
