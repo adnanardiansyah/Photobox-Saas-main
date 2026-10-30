@@ -3,11 +3,16 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { generateUniqueGalleryCode } from '@/lib/gallery-code-generator'
 import { prisma } from '@/lib/db/prisma'
+import { requireAdmin, apiError, ApiError, validPhotoUrl } from '@/lib/api-security'
 
 export async function POST(request: NextRequest) {
   try {
-    const { galleryCode, photos, outletId, frameId, totalPrice = 25000 } = await request.json()
+    const user = await requireAdmin(request, true)
+    const body = await request.json()
+    const galleryCode = body.galleryCode ? String(body.galleryCode).trim().toUpperCase() : await generateUniqueGalleryCode()
+    const { photos = [], outletId, frameId, totalPrice = 25000 } = body
 
     if (!galleryCode || !photos || !Array.isArray(photos)) {
       return NextResponse.json(
@@ -16,6 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!/^[A-Z0-9-]{6,64}$/.test(galleryCode) || photos.length > 20 || !photos.every((url: unknown) => validPhotoUrl(url) || typeof url === 'string' && /^\/(photos|templates)\/[a-zA-Z0-9 _./-]+\.(jpg|jpeg|png|webp)$/i.test(url) && !url.includes('..'))) throw new ApiError(400, 'Kode atau URL foto tidak valid')
     // Cek apakah gallery code sudah ada
     const existingSession = await prisma.sessionPhoto.findUnique({
       where: { galleryCode },
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
     let targetOutletId = outletId
     if (!targetOutletId) {
       const defaultOutlet = await prisma.outlet.findFirst({
-        where: { machineId: 'BOOTH-ACEH-001' },
+        where: { tenantId: user.tenantId, isActive: true },
       })
       targetOutletId = defaultOutlet?.id
     }
@@ -44,15 +50,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!await prisma.outlet.findFirst({ where: { id: targetOutletId, tenantId: user.tenantId } })) throw new ApiError(404, 'Outlet tidak ditemukan')
+    if (typeof totalPrice !== 'number' || !Number.isFinite(totalPrice) || totalPrice < 0) throw new ApiError(400, 'Harga tidak valid')
     // Ambil frame template default jika frameId tidak valid / tidak dispecify
     let targetFrameId: string | null = null
     if (frameId) {
-      const frameExists = await prisma.frameTemplate.findUnique({ where: { id: frameId } })
+      const frameExists = await prisma.frameTemplate.findFirst({ where: { id: frameId, tenantId: user.tenantId } })
       if (frameExists) targetFrameId = frameId
     }
     if (!targetFrameId) {
       const defaultFrame = await prisma.frameTemplate.findFirst({
-        where: { isActive: true },
+        where: { isActive: true, tenantId: user.tenantId },
         orderBy: { createdAt: 'desc' },
       })
       targetFrameId = defaultFrame?.id ?? null
@@ -64,11 +72,13 @@ export async function POST(request: NextRequest) {
         outletId: targetOutletId,
         frameId: targetFrameId,
         sessionCode: `SESSION-${galleryCode}-001`,
-        status: 'COMPLETED',
+        status: photos.length ? 'COMPLETED' : 'CAPTURING',
         photos, // kolom Json -> simpan array langsung, bukan JSON.stringify
         totalPrice,
+        completedAt: photos.length ? new Date() : null,
+        transaction: photos.length ? { create: { outletId: targetOutletId, amount: totalPrice, paymentMethod: 'CASH', status: 'SUCCESS', paidAt: new Date() } } : undefined,
         paymentMethod: 'CASH',
-        paymentStatus: 'PAID',
+        paymentStatus: photos.length ? 'PAID' : 'PENDING',
         galleryCode,
         galleryExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 hari
       },
@@ -84,18 +94,16 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Admin Gallery API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create gallery' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
 
 // GET - List all galleries (for admin)
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAdmin(request)
     const sessions = await prisma.sessionPhoto.findMany({
+      where: { outlet: { tenantId: user.tenantId } },
       include: {
         outlet: true,
         frame: true,
@@ -123,10 +131,6 @@ export async function GET(request: NextRequest) {
       data: galleries,
     })
   } catch (error) {
-    console.error('[Admin Gallery API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch galleries' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
