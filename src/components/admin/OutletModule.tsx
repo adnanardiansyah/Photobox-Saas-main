@@ -1,22 +1,15 @@
 'use client'
+import { WriteAccess } from './ui/WriteAccess'
 
 import { useShallow } from 'zustand/react/shallow'
 
 import { useState, useEffect } from 'react'
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  MapPin,
-  Phone,
-  Cpu,
-  Globe,
-  Loader2,
-  Store
-} from 'lucide-react'
+import { Plus, Search, Edit, Trash2, MapPin, Phone, Cpu, Globe, Loader2, Store } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
+import { adminRequest } from '@/lib/admin-client'
+import { DeviceKeyDialog } from './ui/DeviceKeyDialog'
+import { useAdminForm } from './ui/useAdminForm'
 
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input, Switch } from './ui/Field'
@@ -26,12 +19,16 @@ interface OutletData {
   name: string
   address: string
   phone: string
-  latitude: number
-  longitude: number
+  latitude: number | null
+  longitude: number | null
   isActive: boolean
   machineId: string
   createdAt: string
-  config?: { priceDefault: number; printEnabled: boolean; paymentMethods: { qris: boolean; voucher: boolean } }
+  config?: {
+    priceDefault: number
+    printEnabled: boolean
+    paymentMethods: { qris: boolean; voucher: boolean }
+  }
 }
 
 interface OutletFormProps {
@@ -42,12 +39,16 @@ interface OutletFormProps {
     name: string
     address: string
     phone: string
-    latitude: number
-    longitude: number
+    latitude: number | null
+    longitude: number | null
     isActive: boolean
     machineId: string
-    config: { priceDefault: number; printEnabled: boolean; paymentMethods: { qris: boolean; voucher: boolean } }
-  }) => void
+    config: {
+      priceDefault: number
+      printEnabled: boolean
+      paymentMethods: { qris: boolean; voucher: boolean }
+    }
+  }) => Promise<void>
 }
 
 function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
@@ -55,11 +56,18 @@ function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
     name: outlet?.name || '',
     address: outlet?.address || '',
     phone: outlet?.phone || '',
-    latitude: outlet?.latitude ?? 0,
-    longitude: outlet?.longitude ?? 0,
+    latitude: outlet?.latitude ?? '',
+    longitude: outlet?.longitude ?? '',
     isActive: outlet?.isActive ?? true,
     machineId: outlet?.machineId || '',
-    config: { priceDefault: outlet?.config?.priceDefault ?? 25000, printEnabled: outlet?.config?.printEnabled ?? false, paymentMethods: { qris: outlet?.config?.paymentMethods?.qris ?? true, voucher: outlet?.config?.paymentMethods?.voucher ?? true } }
+    config: {
+      priceDefault: outlet?.config?.priceDefault ?? 25000,
+      printEnabled: outlet?.config?.printEnabled ?? false,
+      paymentMethods: {
+        qris: outlet?.config?.paymentMethods?.qris ?? true,
+        voucher: outlet?.config?.paymentMethods?.voucher ?? true,
+      },
+    },
   })
 
   useEffect(() => {
@@ -67,127 +75,215 @@ function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
       name: outlet?.name || '',
       address: outlet?.address || '',
       phone: outlet?.phone || '',
-      latitude: outlet?.latitude ?? 0,
-      longitude: outlet?.longitude ?? 0,
+      latitude: outlet?.latitude ?? '',
+      longitude: outlet?.longitude ?? '',
       isActive: outlet?.isActive ?? true,
-      machineId: outlet?.machineId || '',
-    config: { priceDefault: outlet?.config?.priceDefault ?? 25000, printEnabled: outlet?.config?.printEnabled ?? false, paymentMethods: { qris: outlet?.config?.paymentMethods?.qris ?? true, voucher: outlet?.config?.paymentMethods?.voucher ?? true } }
+      machineId:
+        outlet?.machineId || (open ? `PB-${crypto.randomUUID().slice(0, 8).toUpperCase()}` : ''),
+      config: {
+        priceDefault: outlet?.config?.priceDefault ?? 25000,
+        printEnabled: outlet?.config?.printEnabled ?? false,
+        paymentMethods: {
+          qris: outlet?.config?.paymentMethods?.qris ?? true,
+          voucher: outlet?.config?.paymentMethods?.voucher ?? true,
+        },
+      },
     })
-  }, [outlet])
+  }, [outlet, open])
 
+  const { saving, error, submit } = useAdminForm(open, onClose)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      ...formData,
-      latitude: Number(formData.latitude),
-      longitude: Number(formData.longitude)
+    void submit(async () => {
+      await onSubmit({
+        ...formData,
+        latitude: formData.latitude === '' ? null : Number(formData.latitude),
+        longitude: formData.longitude === '' ? null : Number(formData.longitude),
+      })
     })
-    onClose()
   }
 
   return (
     <Modal
+      busy={saving}
       open={open}
       onClose={onClose}
-      title={outlet ? 'Edit Outlet' : 'Add New Outlet'}
-      description={outlet ? 'Perbarui detail outlet photo booth Anda.' : 'Buat outlet photo booth baru untuk tim Anda.'}
+      title={outlet ? 'Ubah outlet' : 'Tambah outlet'}
+      description={
+        outlet
+          ? 'Perbarui detail outlet photo booth Anda.'
+          : 'Buat outlet photo booth baru untuk tim Anda.'
+      }
       icon={Store}
     >
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label="Outlet Name" required>
-            <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Trans Studio Mall"
-              required
-            />
-          </Field>
-
-          <Field label="Address" required>
-            <Input
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="e.g. Jl. Jend. Sudirman No. 12"
-              required
-            />
-          </Field>
-
-          <Field label="Phone">
-            <Input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+62 812 3456 7890"
-            />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Latitude" required>
+        {error && (
+          <p
+            role="alert"
+            className="mx-6 mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300"
+          >
+            {error}
+          </p>
+        )}
+        <fieldset disabled={saving} className="contents">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <Field label="Nama outlet" required>
               <Input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: e.target.value as unknown as number })}
-                placeholder="-6.2088"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Trans Studio Mall"
                 required
               />
             </Field>
-            <Field label="Longitude" required>
+
+            <Field label="Alamat" required>
               <Input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: e.target.value as unknown as number })}
-                placeholder="106.8456"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="e.g. Jl. Jend. Sudirman No. 12"
                 required
               />
             </Field>
+
+            <Field label="Nomor telepon">
+              <Input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+62 812 3456 7890"
+              />
+            </Field>
+
+            <details className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+              <summary className="cursor-pointer text-gray-600 dark:text-gray-300">
+                Lokasi peta (opsional)
+              </summary>
+              <p className="my-3 text-xs text-gray-500">
+                Alamat outlet sudah cukup untuk memulai. Isi koordinat jika ingin menampilkan titik
+                pada peta.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Lintang (latitude)">
+                  <Input
+                    type="number"
+                    step="any"
+                    value={formData.latitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, latitude: e.target.value as unknown as number })
+                    }
+                    placeholder="-6.2088"
+                  />
+                </Field>
+                <Field label="Bujur (longitude)">
+                  <Input
+                    type="number"
+                    step="any"
+                    value={formData.longitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, longitude: e.target.value as unknown as number })
+                    }
+                    placeholder="106.8456"
+                  />
+                </Field>
+              </div>
+            </details>
+            <details className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+              <summary className="cursor-pointer text-gray-600 dark:text-gray-300">
+                Kode perangkat (dibuat otomatis)
+              </summary>
+              <Field
+                label="Machine ID"
+                hint="Kode ini digunakan saat login booth. Biarkan nilai otomatis untuk perangkat baru. Mengubah kode outlet yang sudah terhubung mengharuskan login ulang perangkat."
+              >
+                <Input
+                  value={formData.machineId}
+                  onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
+                  placeholder="e.g. PB-0001"
+                />
+              </Field>
+            </details>
+            <Field label="Harga sesi (Rp)" required>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.config.priceDefault}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    config: { ...formData.config, priceDefault: Number(e.target.value) },
+                  })
+                }
+              />
+            </Field>
+            <Switch
+              checked={formData.config.printEnabled}
+              onChange={(checked) =>
+                setFormData({ ...formData, config: { ...formData.config, printEnabled: checked } })
+              }
+              label="Aktifkan cetak"
+              description="Memerlukan printer jaringan ESC/POS yang dikonfigurasi di server."
+            />
+            <Switch
+              checked={formData.config.paymentMethods.qris}
+              onChange={(checked) =>
+                setFormData({
+                  ...formData,
+                  config: {
+                    ...formData.config,
+                    paymentMethods: { ...formData.config.paymentMethods, qris: checked },
+                  },
+                })
+              }
+              label="QRIS"
+            />
+            <Switch
+              checked={formData.config.paymentMethods.voucher}
+              onChange={(checked) =>
+                setFormData({
+                  ...formData,
+                  config: {
+                    ...formData.config,
+                    paymentMethods: { ...formData.config.paymentMethods, voucher: checked },
+                  },
+                })
+              }
+              label="Voucher"
+            />
+
+            <Switch
+              checked={formData.isActive}
+              onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              label="Aktif"
+              description="Outlet aktif akan terlihat dan terpakai di aplikasi."
+            />
           </div>
 
-          <Field label="Machine ID" hint="ID mesin photo booth agar sesi foto terhubung otomatis.">
-            <Input
-              value={formData.machineId}
-              onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
-              placeholder="e.g. PB-0001"
-            />
-          </Field>
-
-          <Field label="Harga sesi (Rp)" required><Input type="number" min="0" step="1" value={formData.config.priceDefault} onChange={e => setFormData({ ...formData, config: { ...formData.config, priceDefault: Number(e.target.value) } })} /></Field>
-          <Switch checked={formData.config.printEnabled} onChange={checked => setFormData({ ...formData, config: { ...formData.config, printEnabled: checked } })} label="Aktifkan cetak" description="Memerlukan printer jaringan ESC/POS yang dikonfigurasi di server." />
-          <Switch checked={formData.config.paymentMethods.qris} onChange={checked => setFormData({ ...formData, config: { ...formData.config, paymentMethods: { ...formData.config.paymentMethods, qris: checked } } })} label="QRIS" />
-          <Switch checked={formData.config.paymentMethods.voucher} onChange={checked => setFormData({ ...formData, config: { ...formData.config, paymentMethods: { ...formData.config.paymentMethods, voucher: checked } } })} label="Voucher" />
-
-          <Switch
-            checked={formData.isActive}
-            onChange={(checked) => setFormData({ ...formData, isActive: checked })}
-            label="Active"
-            description="Outlet aktif akan terlihat dan terpakai di aplikasi."
-          />
-        </div>
-
-        <ModalFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
-          >
-            {outlet ? 'Update' : 'Create'}
-          </button>
-        </ModalFooter>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25"
+            >
+              {saving ? 'Menyimpan...' : outlet ? 'Simpan perubahan' : 'Simpan'}
+            </button>
+          </ModalFooter>
+        </fieldset>
       </form>
     </Modal>
   )
 }
 
 export function OutletModule() {
-  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
+  const { searchQuery } = useDashboardStore(
+    useShallow((state) => ({ searchQuery: state.searchQuery }))
+  )
   const [outlets, setOutlets] = useState<OutletData[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -207,71 +303,71 @@ export function OutletModule() {
       const res = await fetch('/api/admin/outlets')
       const data = await parseRes(res)
       if (data.success) setOutlets(data.data)
-      else toast.error('Failed to load outlets')
+      else toast.error('Daftar outlet belum dapat dimuat. Coba muat ulang menu.')
     } catch {
-      toast.error('Failed to load outlets')
+      toast.error('Daftar outlet belum dapat dimuat. Coba muat ulang menu.')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchOutlets() }, [])
+  useEffect(() => {
+    fetchOutlets()
+  }, [])
 
+  const [deviceKey, setDeviceKey] = useState<{ machineId: string; apiKey: string } | null>(null)
+  const [issuingKey, setIssuingKey] = useState(false)
   const createDeviceKey = async (outletId: string) => {
+    if (issuingKey) return
+    setIssuingKey(true)
     try {
-      const response = await fetch('/api/admin/booth-keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outletId }) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Gagal membuat key')
-      window.prompt(`Simpan API key untuk ${result.machineId}. Key hanya ditampilkan sekali.`, result.apiKey)
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal membuat key') }
+      const result = await adminRequest('/api/admin/booth-keys', {
+        method: 'POST',
+        body: JSON.stringify({ outletId }),
+      })
+      setDeviceKey({ machineId: result.machineId, apiKey: result.apiKey })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal membuat kunci perangkat')
+    } finally {
+      setIssuingKey(false)
+    }
   }
 
   const handleCreate = async (formData: any) => {
-    const res = await fetch('/api/admin/outlets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    })
-    const data = await parseRes(res)
-    if (data.success) {
-      toast.success('Outlet created successfully!')
-      fetchOutlets()
-    } else {
-      toast.error(data.error || 'Failed to create outlet')
-    }
+    await adminRequest('/api/admin/outlets', { method: 'POST', body: JSON.stringify(formData) })
+    toast.success('Data berhasil ditambahkan')
+    void fetchOutlets()
   }
-
   const handleUpdate = async (formData: any) => {
-    if (!editingOutlet) return
-    const res = await fetch(`/api/admin/outlets?id=${editingOutlet.id}`, {
+    if (!editingOutlet) throw new Error('Pilih data yang akan diubah')
+    await adminRequest(`/api/admin/outlets?id=${encodeURIComponent(editingOutlet.id)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     })
-    const data = await parseRes(res)
-    if (data.success) {
-      toast.success('Outlet updated successfully!')
-      fetchOutlets()
-    } else {
-      toast.error(data.error || 'Failed to update outlet')
-    }
+    toast.success('Perubahan berhasil disimpan')
+    void fetchOutlets()
   }
 
+  const [deleting, setDeleting] = useState(false)
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/admin/outlets?id=${id}`, { method: 'DELETE' })
-    const data = await parseRes(res)
-    if (data.success) {
-      toast.success('Outlet deleted successfully!')
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await adminRequest(`/api/admin/outlets?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      toast.success('Data berhasil dihapus')
       setDeleteConfirm(null)
-      fetchOutlets()
-    } else {
-      toast.error(data.error || 'Failed to delete outlet')
+      void fetchOutlets()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menghapus data')
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const filteredOutlets = outlets.filter(outlet =>
-    outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    outlet.address.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOutlets = outlets.filter(
+    (outlet) =>
+      outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      outlet.address.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
@@ -286,23 +382,27 @@ export function OutletModule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Outlet Management</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage your photo booth outlets</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kelola outlet</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Atur lokasi, harga sesi, pembayaran, dan perangkat booth.
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Outlet
-        </button>
+        <WriteAccess>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah outlet
+          </button>
+        </WriteAccess>
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
         <input
           type="text"
-          placeholder="Search outlets..."
+          placeholder="Cari nama atau alamat outlet..."
           value={searchQuery}
           onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -317,15 +417,19 @@ export function OutletModule() {
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${outlet.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                <div
+                  className={`w-2.5 h-2.5 rounded-full ${outlet.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
+                />
                 <h3 className="font-semibold text-gray-900 dark:text-white">{outlet.name}</h3>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                outlet.isActive
-                  ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-              }`}>
-                {outlet.isActive ? 'Active' : 'Inactive'}
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  outlet.isActive
+                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                }`}
+              >
+                {outlet.isActive ? 'Aktif' : 'Nonaktif'}
               </span>
             </div>
 
@@ -349,30 +453,44 @@ export function OutletModule() {
               {(outlet.latitude || outlet.longitude) && (
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 shrink-0" />
-                  <span className="text-xs">{outlet.latitude}, {outlet.longitude}</span>
+                  <span className="text-xs">
+                    {outlet.latitude}, {outlet.longitude}
+                  </span>
                 </div>
               )}
             </div>
 
             <div className="flex gap-2">
-              <button className="px-3 py-2 rounded-lg border text-sm" onClick={() => createDeviceKey(outlet.id)}>Buat API key</button>
-              <button
-                onClick={() => {
-                  setEditingOutlet(outlet)
-                  setShowForm(true)
-                }}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
-              >
-                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Edit</span>
-              </button>
-              <button
-                onClick={() => setDeleteConfirm(outlet.id)}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
-              >
-                <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-900 dark:text-white">Delete</span>
-              </button>
+              <WriteAccess>
+                <button
+                  className="px-3 py-2 rounded-lg border text-sm"
+                  disabled={issuingKey}
+                  onClick={() => createDeviceKey(outlet.id)}
+                >
+                  {issuingKey ? 'Menyiapkan...' : 'Hubungkan booth'}
+                </button>
+              </WriteAccess>
+              <WriteAccess>
+                <button
+                  onClick={() => {
+                    setEditingOutlet(outlet)
+                    setShowForm(true)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
+                >
+                  <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Ubah</span>
+                </button>
+              </WriteAccess>
+              <WriteAccess>
+                <button
+                  onClick={() => setDeleteConfirm(outlet.id)}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
+                >
+                  <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Hapus</span>
+                </button>
+              </WriteAccess>
             </div>
           </div>
         ))}
@@ -380,10 +498,11 @@ export function OutletModule() {
 
       {filteredOutlets.length === 0 && !loading && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No outlets found</p>
+          <p className="text-gray-500 dark:text-gray-400">Outlet tidak ditemukan</p>
         </div>
       )}
 
+      <DeviceKeyDialog value={deviceKey} onClose={() => setDeviceKey(null)} />
       <OutletForm
         open={showForm}
         outlet={editingOutlet}
@@ -396,10 +515,11 @@ export function OutletModule() {
 
       {/* Delete confirmation */}
       <Modal
+        busy={deleting}
         open={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
-        title="Delete Outlet?"
-        description="This action cannot be undone. Are you sure you want to delete this outlet?"
+        title="Nonaktifkan outlet?"
+        description="Outlet akan dinonaktifkan dan tidak dapat digunakan untuk sesi baru. Riwayat foto dan transaksi tetap tersimpan. Lanjutkan?"
         icon={Trash2}
         size="sm"
       >
@@ -408,15 +528,17 @@ export function OutletModule() {
             type="button"
             onClick={() => setDeleteConfirm(null)}
             className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
+            disabled={deleting}
           >
-            Cancel
+            Batal
           </button>
           <button
             type="button"
             onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
             className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/25"
+            disabled={deleting}
           >
-            Delete
+            Hapus
           </button>
         </div>
       </Modal>
