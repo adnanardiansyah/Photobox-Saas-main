@@ -5,6 +5,8 @@ import { create } from 'zustand'
 // ============================================
 
 export interface Outlet {
+  latitude?: number | null
+  longitude?: number | null
   id: string
   name: string
   location: string
@@ -94,7 +96,19 @@ export interface BoothStatus {
 // Dashboard Store
 // ============================================
 
+export interface AdminIdentity {
+  id: string
+  name: string
+  email: string
+  role: 'SUPER_ADMIN' | 'OWNER' | 'MANAGER' | 'STAFF'
+  tenantId: string
+  tenantName?: string
+}
+
 interface DashboardState {
+  currentUser: AdminIdentity | null
+  setCurrentUser: (user: AdminIdentity | null) => void
+  clearAdminSession: () => void
   refreshDashboard: () => Promise<void>
   refreshPublic: () => Promise<void>
   photosToday: number
@@ -107,42 +121,42 @@ interface DashboardState {
   branding: Branding
   transactions: Transaction[]
   boothStatuses: BoothStatus[]
-  
+
   // UI State
   darkMode: boolean
   sidebarOpen: boolean
   sidebarCollapsed: boolean
   activeModule: string
   searchQuery: string
-  
+
   // Actions - Outlets
   addOutlet: (outlet: Omit<Outlet, 'id' | 'createdAt'>) => void
   updateOutlet: (id: string, data: Partial<Outlet>) => void
   deleteOutlet: (id: string) => void
-  
+
   // Actions - Templates
   addTemplate: (template: Omit<Template, 'id' | 'createdAt'>) => void
   updateTemplate: (id: string, data: Partial<Template>) => void
   deleteTemplate: (id: string) => void
-  
+
   // Actions - Users
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void
   updateUser: (id: string, data: Partial<User>) => void
   deleteUser: (id: string) => void
-  
+
   // Actions - Vouchers
   addVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => void
   updateVoucher: (id: string, data: Partial<Voucher>) => void
   deleteVoucher: (id: string) => void
-  
+
   // Actions - Testimonials
   addTestimonial: (testimonial: Omit<Testimonial, 'id' | 'createdAt'>) => void
   updateTestimonial: (id: string, data: Partial<Testimonial>) => void
   deleteTestimonial: (id: string) => void
-  
+
   // Actions - Branding
   updateBranding: (data: Partial<Branding>) => void
-  
+
   // Actions - UI
   toggleDarkMode: () => void
   toggleSidebar: () => void
@@ -161,7 +175,7 @@ const defaultBranding: Branding = {
   secondaryColor: '#ec4899',
   heroBannerUrl: '',
   companyName: 'SnapNext',
-  tagline: 'Capture Your Moments'
+  tagline: 'Capture Your Moments',
 }
 
 // ============================================
@@ -186,6 +200,29 @@ function generateVoucherCode(): string {
 // ============================================
 
 export const useDashboardStore = create<DashboardState>((set) => ({
+  currentUser: null,
+  setCurrentUser: (user) =>
+    set((state) => ({
+      currentUser: user,
+      ...(user?.tenantName
+        ? { branding: { ...state.branding, companyName: user.tenantName } }
+        : {}),
+    })),
+  clearAdminSession: () =>
+    set({
+      currentUser: null,
+      outlets: [],
+      templates: [],
+      users: [],
+      vouchers: [],
+      testimonials: [],
+      transactions: [],
+      boothStatuses: [],
+      photosToday: 0,
+      branding: defaultBranding,
+      activeModule: 'dashboard',
+      searchQuery: '',
+    }),
   photosToday: 0,
   refreshDashboard: async () => {
     const response = await fetch('/api/admin/dashboard')
@@ -208,94 +245,130 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   branding: defaultBranding,
   transactions: [],
   boothStatuses: [],
-  
+
   // Initial UI State
   darkMode: false,
   sidebarOpen: true,
   sidebarCollapsed: false,
   activeModule: 'dashboard',
   searchQuery: '',
-  
+
   // Outlets Actions
-  addOutlet: (outlet) => set((state) => ({
-    outlets: [...state.outlets, { ...outlet, id: generateId(), createdAt: new Date().toISOString() }]
-  })),
-  
-  updateOutlet: (id, data) => set((state) => ({
-    outlets: state.outlets.map((o) => (o.id === id ? { ...o, ...data } : o))
-  })),
-  
-  deleteOutlet: (id) => set((state) => ({
-    outlets: state.outlets.filter((o) => o.id !== id)
-  })),
-  
+  addOutlet: (outlet) =>
+    set((state) => ({
+      outlets: [
+        ...state.outlets,
+        { ...outlet, id: generateId(), createdAt: new Date().toISOString() },
+      ],
+    })),
+
+  updateOutlet: (id, data) =>
+    set((state) => ({
+      outlets: state.outlets.map((o) => (o.id === id ? { ...o, ...data } : o)),
+    })),
+
+  deleteOutlet: (id) =>
+    set((state) => ({
+      outlets: state.outlets.filter((o) => o.id !== id),
+    })),
+
   // Templates Actions
-  addTemplate: (template) => set((state) => ({
-    templates: [...state.templates, { ...template, id: generateId(), createdAt: new Date().toISOString() }]
-  })),
-  
-  updateTemplate: (id, data) => set((state) => ({
-    templates: state.templates.map((t) => (t.id === id ? { ...t, ...data } : t))
-  })),
-  
-  deleteTemplate: (id) => set((state) => ({
-    templates: state.templates.filter((t) => t.id !== id)
-  })),
-  
+  addTemplate: (template) =>
+    set((state) => ({
+      templates: [
+        ...state.templates,
+        { ...template, id: generateId(), createdAt: new Date().toISOString() },
+      ],
+    })),
+
+  updateTemplate: (id, data) =>
+    set((state) => ({
+      templates: state.templates.map((t) => (t.id === id ? { ...t, ...data } : t)),
+    })),
+
+  deleteTemplate: (id) =>
+    set((state) => ({
+      templates: state.templates.filter((t) => t.id !== id),
+    })),
+
   // Users Actions
-  addUser: (user) => set((state) => ({
-    users: [...state.users, { ...user, id: generateId(), createdAt: new Date().toISOString() }]
-  })),
-  
-  updateUser: (id, data) => set((state) => ({
-    users: state.users.map((u) => (u.id === id ? { ...u, ...data } : u))
-  })),
-  
-  deleteUser: (id) => set((state) => ({
-    users: state.users.filter((u) => u.id !== id)
-  })),
-  
+  addUser: (user) =>
+    set((state) => ({
+      users: [...state.users, { ...user, id: generateId(), createdAt: new Date().toISOString() }],
+    })),
+
+  updateUser: (id, data) =>
+    set((state) => ({
+      users: state.users.map((u) => (u.id === id ? { ...u, ...data } : u)),
+    })),
+
+  deleteUser: (id) =>
+    set((state) => ({
+      users: state.users.filter((u) => u.id !== id),
+    })),
+
   // Vouchers Actions
-  addVoucher: (voucher) => set((state) => ({
-    vouchers: [...state.vouchers, { 
-      ...voucher, 
-      id: generateId(), 
-      code: generateVoucherCode(),
-      usedCount: 0,
-      createdAt: new Date().toISOString() 
-    }]
-  })),
-  
-  updateVoucher: (id, data) => set((state) => ({
-    vouchers: state.vouchers.map((v) => (v.id === id ? { ...v, ...data } : v))
-  })),
-  
-  deleteVoucher: (id) => set((state) => ({
-    vouchers: state.vouchers.filter((v) => v.id !== id)
-  })),
-  
+  addVoucher: (voucher) =>
+    set((state) => ({
+      vouchers: [
+        ...state.vouchers,
+        {
+          ...voucher,
+          id: generateId(),
+          code: generateVoucherCode(),
+          usedCount: 0,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    })),
+
+  updateVoucher: (id, data) =>
+    set((state) => ({
+      vouchers: state.vouchers.map((v) => (v.id === id ? { ...v, ...data } : v)),
+    })),
+
+  deleteVoucher: (id) =>
+    set((state) => ({
+      vouchers: state.vouchers.filter((v) => v.id !== id),
+    })),
+
   // Testimonials Actions
-  addTestimonial: (testimonial) => set((state) => ({
-    testimonials: [...state.testimonials, { ...testimonial, id: generateId(), createdAt: new Date().toISOString() }]
-  })),
-  
-  updateTestimonial: (id, data) => set((state) => ({
-    testimonials: state.testimonials.map((t) => (t.id === id ? { ...t, ...data } : t))
-  })),
-  
-  deleteTestimonial: (id) => set((state) => ({
-    testimonials: state.testimonials.filter((t) => t.id !== id)
-  })),
-  
+  addTestimonial: (testimonial) =>
+    set((state) => ({
+      testimonials: [
+        ...state.testimonials,
+        { ...testimonial, id: generateId(), createdAt: new Date().toISOString() },
+      ],
+    })),
+
+  updateTestimonial: (id, data) =>
+    set((state) => ({
+      testimonials: state.testimonials.map((t) => (t.id === id ? { ...t, ...data } : t)),
+    })),
+
+  deleteTestimonial: (id) =>
+    set((state) => ({
+      testimonials: state.testimonials.filter((t) => t.id !== id),
+    })),
+
   // Branding Actions
-  updateBranding: (data) => set((state) => ({
-    branding: { ...state.branding, ...data }
-  })),
-  
+  updateBranding: (data) =>
+    set((state) => ({
+      branding: { ...state.branding, ...data },
+    })),
+
   // UI Actions
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  setActiveModule: (module) => set({ activeModule: module }),
-  setSearchQuery: (query) => set({ searchQuery: query })
+  setActiveModule: (module) =>
+    set((state) => ({
+      activeModule: module,
+      searchQuery: module === state.activeModule ? state.searchQuery : '',
+      sidebarOpen:
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+          ? false
+          : state.sidebarOpen,
+    })),
+  setSearchQuery: (query) => set({ searchQuery: query }),
 }))
