@@ -2,18 +2,18 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from 'framer-motion'
-import { 
-  Camera, 
-  MapPin, 
-  Phone, 
+import {
+  MapPin,
+  Phone,
   Clock,
   Instagram,
   Twitter,
   Youtube,
   ArrowUpRight,
   Heart,
-  Sparkles
+  Sparkles,
 } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -21,9 +21,20 @@ const ease = [0.22, 1, 0.36, 1] as const
 // ============================================
 // Floating Particle — decorative dot
 // ============================================
-function Particle({ x, y, size, duration, delay, color }: {
-  x: number; y: number; size: number
-  duration: number; delay: number; color: string
+function Particle({
+  x,
+  y,
+  size,
+  duration,
+  delay,
+  color,
+}: {
+  x: number
+  y: number
+  size: number
+  duration: number
+  delay: number
+  color: string
 }) {
   return (
     <motion.div
@@ -54,7 +65,10 @@ function useTypewriter(text: string, speed = 38, startDelay = 600) {
       const interval = setInterval(() => {
         setDisplayed(text.slice(0, i + 1))
         i++
-        if (i >= text.length) { clearInterval(interval); setDone(true) }
+        if (i >= text.length) {
+          clearInterval(interval)
+          setDone(true)
+        }
       }, speed)
       return () => clearInterval(interval)
     }, startDelay)
@@ -67,10 +81,20 @@ function useTypewriter(text: string, speed = 38, startDelay = 600) {
 // ============================================
 // Magnetic Social Icon
 // ============================================
-function MagneticSocial({ icon: Icon, href, label, primaryColor, index, isInView }: {
+function MagneticSocial({
+  icon: Icon,
+  href,
+  label,
+  primaryColor,
+  index,
+  isInView,
+}: {
   icon: React.ComponentType<{ className?: string }>
-  href: string; label: string; primaryColor: string
-  index: number; isInView: boolean
+  href: string
+  label: string
+  primaryColor: string
+  index: number
+  isInView: boolean
 }) {
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
@@ -96,7 +120,11 @@ function MagneticSocial({ icon: Icon, href, label, primaryColor, index, isInView
       transition={{ duration: 0.45, delay: 0.5 + index * 0.1, ease }}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { mouseX.set(0); mouseY.set(0); setHovered(false) }}
+      onMouseLeave={() => {
+        mouseX.set(0)
+        mouseY.set(0)
+        setHovered(false)
+      }}
       style={{ x: springX, y: springY }}
       className="relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden"
     >
@@ -118,7 +146,8 @@ function MagneticSocial({ icon: Icon, href, label, primaryColor, index, isInView
             transition={{ duration: 0.5, ease: 'linear' }}
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%)',
+              background:
+                'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%)',
               width: '100%',
             }}
           />
@@ -138,9 +167,18 @@ function MagneticSocial({ icon: Icon, href, label, primaryColor, index, isInView
 // ============================================
 // Quick Link Item — with arrow reveal
 // ============================================
-function QuickLinkItem({ href, label, index, primaryColor, isInView }: {
-  href: string; label: string; index: number
-  primaryColor: string; isInView: boolean
+function QuickLinkItem({
+  href,
+  label,
+  index,
+  primaryColor,
+  isInView,
+}: {
+  href: string
+  label: string
+  index: number
+  primaryColor: string
+  isInView: boolean
 }) {
   const [hovered, setHovered] = useState(false)
 
@@ -187,9 +225,18 @@ function QuickLinkItem({ href, label, index, primaryColor, isInView }: {
 // ============================================
 // Contact Item — icon pulse on hover
 // ============================================
-function ContactItem({ icon: Icon, text, index, primaryColor, isInView }: {
+function ContactItem({
+  icon: Icon,
+  text,
+  index,
+  primaryColor,
+  isInView,
+}: {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
-  text: string; index: number; primaryColor: string; isInView: boolean
+  text: string
+  index: number
+  primaryColor: string
+  isInView: boolean
 }) {
   const [hovered, setHovered] = useState(false)
 
@@ -235,44 +282,42 @@ export function Footer() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.12 })
 
-  const tagline = branding.tagline || 'Platform photo booth profesional untuk event dan bisnis di Indonesia.'
+  const tagline =
+    branding.tagline || 'Platform photo booth profesional untuk event dan bisnis di Indonesia.'
   const { displayed, done } = useTypewriter(isInView ? tagline : '', 32, 400)
 
   // Decorative particles config
   const particles = [
-    { x: 8,  y: 20, size: 3, duration: 4.5, delay: 0,    color: `${branding.primaryColor}60`   },
-    { x: 18, y: 60, size: 2, duration: 5.2, delay: 0.8,  color: `${branding.secondaryColor}50` },
-    { x: 35, y: 35, size: 4, duration: 3.8, delay: 1.5,  color: `${branding.primaryColor}40`   },
-    { x: 55, y: 15, size: 2, duration: 6,   delay: 0.4,  color: `${branding.secondaryColor}60` },
-    { x: 72, y: 70, size: 3, duration: 4.2, delay: 2,    color: `${branding.primaryColor}50`   },
-    { x: 85, y: 30, size: 2, duration: 5.5, delay: 1.2,  color: `${branding.secondaryColor}40` },
-    { x: 92, y: 55, size: 3, duration: 4.8, delay: 0.6,  color: `${branding.primaryColor}55`   },
+    { x: 8, y: 20, size: 3, duration: 4.5, delay: 0, color: `${branding.primaryColor}60` },
+    { x: 18, y: 60, size: 2, duration: 5.2, delay: 0.8, color: `${branding.secondaryColor}50` },
+    { x: 35, y: 35, size: 4, duration: 3.8, delay: 1.5, color: `${branding.primaryColor}40` },
+    { x: 55, y: 15, size: 2, duration: 6, delay: 0.4, color: `${branding.secondaryColor}60` },
+    { x: 72, y: 70, size: 3, duration: 4.2, delay: 2, color: `${branding.primaryColor}50` },
+    { x: 85, y: 30, size: 2, duration: 5.5, delay: 1.2, color: `${branding.secondaryColor}40` },
+    { x: 92, y: 55, size: 3, duration: 4.8, delay: 0.6, color: `${branding.primaryColor}55` },
   ]
 
   const quickLinks = [
-    { href: '/features',     label: 'Features'     },
-    { href: '/pricing',      label: 'Pricing'      },
-    { href: '/locations',    label: 'Locations'    },
+    { href: '/features', label: 'Features' },
+    { href: '/pricing', label: 'Pricing' },
+    { href: '/locations', label: 'Locations' },
     { href: '/testimonials', label: 'Testimonials' },
   ]
 
   const contactItems = [
-    { icon: Phone,  text: '+62 21 1234 5678' },
+    { icon: Phone, text: '+62 21 1234 5678' },
     { icon: MapPin, text: 'Jakarta, Indonesia' },
-    { icon: Clock,  text: 'Mon-Fri: 9AM - 6PM' },
+    { icon: Clock, text: 'Mon-Fri: 9AM - 6PM' },
   ]
 
   const socialLinks = [
     { icon: Instagram, href: '#', label: 'Instagram' },
-    { icon: Twitter,   href: '#', label: 'Twitter'   },
-    { icon: Youtube,   href: '#', label: 'Youtube'   },
+    { icon: Twitter, href: '#', label: 'Twitter' },
+    { icon: Youtube, href: '#', label: 'Youtube' },
   ]
 
   return (
-    <footer
-      ref={ref}
-      className="relative bg-gray-950 text-white pt-20 pb-8 px-4 overflow-hidden"
-    >
+    <footer ref={ref} className="relative bg-gray-950 text-white pt-20 pb-8 px-4 overflow-hidden">
       {/* ── Floating particles ────────────────────────────────── */}
       {isInView && particles.map((p, i) => <Particle key={i} {...p} />)}
 
@@ -289,7 +334,9 @@ export function Footer() {
         animate={isInView ? { opacity: 0.1, scale: 1 } : {}}
         transition={{ duration: 1.4, delay: 0.2, ease }}
         className="absolute bottom-0 right-1/4 w-[500px] h-[250px] rounded-full pointer-events-none blur-3xl"
-        style={{ background: `radial-gradient(circle, ${branding.secondaryColor}, transparent 65%)` }}
+        style={{
+          background: `radial-gradient(circle, ${branding.secondaryColor}, transparent 65%)`,
+        }}
       />
 
       {/* ── Subtle grid pattern ───────────────────────────────── */}
@@ -306,7 +353,6 @@ export function Footer() {
 
       <div className="max-w-7xl mx-auto relative">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-
           {/* ── Brand Column ──────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -320,19 +366,12 @@ export function Footer() {
               transition={{ type: 'spring', stiffness: 260, damping: 20 }}
               className="flex items-center gap-3 mb-5 w-fit"
             >
-              {branding.logoUrl ? (
-                <img src={branding.logoUrl} alt={branding.companyName} className="h-10 w-auto brightness-0 invert" />
-              ) : (
-                <motion.div
-                  whileHover={{ rotate: 10, scale: 1.08 }}
-                  transition={{ type: 'spring', stiffness: 280, damping: 16 }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
-                  style={{ background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})` }}
-                >
-                  <Camera className="w-5 h-5 text-white" />
-                </motion.div>
-              )}
-              <span className="text-xl font-bold text-white">{branding.companyName}</span>
+              <BrandLogo
+                logoUrl={branding.logoUrl}
+                companyName={branding.companyName}
+                tone="dark"
+                className="h-14 w-auto max-w-full"
+              />
             </motion.div>
 
             {/* Typewriter tagline */}
@@ -371,7 +410,9 @@ export function Footer() {
             transition={{ duration: 0.7, delay: 0.12, ease }}
           >
             <div className="flex items-center gap-2 mb-6">
-              <h4 className="font-semibold text-white text-sm uppercase tracking-wider">Quick Links</h4>
+              <h4 className="font-semibold text-white text-sm uppercase tracking-wider">
+                Quick Links
+              </h4>
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
@@ -399,7 +440,9 @@ export function Footer() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.22, ease }}
           >
-            <h4 className="font-semibold mb-6 text-white text-sm uppercase tracking-wider">Contact</h4>
+            <h4 className="font-semibold mb-6 text-white text-sm uppercase tracking-wider">
+              Contact
+            </h4>
             <ul className="space-y-3.5">
               {contactItems.map(({ icon, text }, i) => (
                 <ContactItem
@@ -442,7 +485,10 @@ export function Footer() {
                 animate={{ scale: [1, 1.3, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <Heart className="w-3.5 h-3.5 fill-current" style={{ color: branding.primaryColor }} />
+                <Heart
+                  className="w-3.5 h-3.5 fill-current"
+                  style={{ color: branding.primaryColor }}
+                />
               </motion.span>
               in Indonesia
             </motion.p>
@@ -451,7 +497,10 @@ export function Footer() {
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white"
-              style={{ background: `linear-gradient(135deg, ${branding.primaryColor}30, ${branding.secondaryColor}30)`, border: `1px solid ${branding.primaryColor}30` }}
+              style={{
+                background: `linear-gradient(135deg, ${branding.primaryColor}30, ${branding.secondaryColor}30)`,
+                border: `1px solid ${branding.primaryColor}30`,
+              }}
             >
               <motion.span
                 className="w-1.5 h-1.5 rounded-full"
