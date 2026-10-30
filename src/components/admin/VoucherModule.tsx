@@ -1,5 +1,7 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
 import {
   Plus,
@@ -17,7 +19,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input, Select, Switch } from './ui/Field'
 
@@ -49,37 +51,27 @@ function CopyButton({ code }: { code: string }) {
   }
 
   return (
-    <motion.button
+    <button
       onClick={handleCopy}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       title="Copy kode"
     >
-      <AnimatePresence mode="wait">
+
         {copied ? (
-          <motion.span
+          <span
             key="check"
-            initial={{ scale: 0, rotate: -30 }}
-            animate={{ scale: 1, rotate: 0 }}
-            exit={{ scale: 0, rotate: 30 }}
-            transition={{ duration: 0.2, ease }}
           >
             <Check className="w-4 h-4 text-green-500" />
-          </motion.span>
+          </span>
         ) : (
-          <motion.span
+          <span
             key="copy"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            transition={{ duration: 0.15 }}
           >
             <Copy className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          </motion.span>
+          </span>
         )}
-      </AnimatePresence>
-    </motion.button>
+
+    </button>
   )
 }
 
@@ -196,11 +188,7 @@ function VoucherForm({ open, voucher, onClose, onSubmit }: VoucherFormProps) {
           </Field>
 
           {formData.usageType === 'MULTI_USE' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease }}
+            <div
             >
               <Field label="Batas Pemakaian" required>
                 <Input
@@ -211,7 +199,7 @@ function VoucherForm({ open, voucher, onClose, onSubmit }: VoucherFormProps) {
                   min="1"
                 />
               </Field>
-            </motion.div>
+            </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
@@ -247,14 +235,12 @@ function VoucherForm({ open, voucher, onClose, onSubmit }: VoucherFormProps) {
           >
             Batal
           </button>
-          <motion.button
+          <button
             type="submit"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
             className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-shadow"
           >
             {voucher ? 'Simpan Perubahan' : 'Buat Voucher'}
-          </motion.button>
+          </button>
         </ModalFooter>
       </form>
     </Modal>
@@ -281,17 +267,11 @@ function VoucherCard({
     : 0
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -16, scale: 0.95 }}
-      transition={{ duration: 0.35, delay: index * 0.04, ease }}
-      whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}
-      layout
+    <div
       className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden group"
     >
       <div
-        className="h-1 w-full transition-all duration-500"
+        className="h-1 w-full transition-colors duration-150"
         style={{
           background: voucher.isActive
             ? 'linear-gradient(90deg, #ec4899, #7c3aed)'
@@ -302,12 +282,10 @@ function VoucherCard({
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <motion.div
-              whileHover={{ rotate: 15, scale: 1.15 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+            <div
             >
               <Gift className="w-5 h-5 text-purple-500" />
-            </motion.div>
+            </div>
             <span className="font-mono font-bold text-base tracking-widest text-gray-900 dark:text-white">
               {voucher.code}
             </span>
@@ -355,12 +333,10 @@ function VoucherCard({
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${usagePct}%` }}
-                transition={{ duration: 0.8, delay: 0.2, ease }}
+              <div
                 className="h-full rounded-full"
                 style={{
+                  width: `${usagePct}%`,
                   background: usagePct > 80
                     ? '#ef4444'
                     : 'linear-gradient(90deg, #ec4899, #7c3aed)'
@@ -371,8 +347,7 @@ function VoucherCard({
         )}
 
         <div className="flex items-center justify-between mb-4">
-          <motion.span
-            layout
+          <span
             className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ${
               voucher.isActive
                 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -380,39 +355,35 @@ function VoucherCard({
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${voucher.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}
+              className={`w-1.5 h-1.5 rounded-full ${voucher.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`}
             />
             {voucher.isActive ? 'Aktif' : 'Nonaktif'}
-          </motion.span>
+          </span>
         </div>
 
         <div className="flex gap-2">
-          <motion.button
+          <button
             onClick={onEdit}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors"
           >
             <Edit className="w-3.5 h-3.5" />
             Edit
-          </motion.button>
-          <motion.button
+          </button>
+          <button
             onClick={onDelete}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-transparent hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-transparent hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Hapus
-          </motion.button>
+          </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
 export function VoucherModule() {
-  const { searchQuery } = useDashboardStore()
+  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
   const [vouchers, setVouchers] = useState<VoucherData[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -502,32 +473,24 @@ export function VoucherModule() {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease }}
+      <div
         className="flex items-center justify-between"
       >
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Voucher & Diskon</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Kelola voucher promosi dan diskon</p>
         </div>
-        <motion.button
+        <button
           onClick={() => setShowForm(true)}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600
                      text-white text-sm font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-shadow"
         >
           <Plus className="w-4 h-4" />
           Buat Voucher
-        </motion.button>
-      </motion.div>
+        </button>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1, ease }}
+      <div
         className="flex flex-col sm:flex-row gap-3"
       >
         <div className="relative flex-1">
@@ -549,13 +512,12 @@ export function VoucherModule() {
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
         </select>
-      </motion.div>
+      </div>
 
-      <AnimatePresence mode="popLayout">
+
         {filteredVouchers.length > 0 ? (
-          <motion.div
+          <div
             key="grid"
-            layout
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             {filteredVouchers.map((voucher, i) => (
@@ -569,25 +531,20 @@ export function VoucherModule() {
                 onDelete={() => setDeleteConfirm(voucher.id)}
               />
             ))}
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
+          <div
             key="empty"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
             className="text-center py-20"
           >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+            <div
             >
               <Gift className="w-14 h-14 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
-            </motion.div>
+            </div>
             <p className="text-gray-400 dark:text-gray-500 text-sm">Tidak ada voucher ditemukan</p>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+
 
       <VoucherForm
         open={showForm}
