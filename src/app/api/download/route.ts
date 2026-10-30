@@ -7,11 +7,14 @@ import { prisma } from '@/lib/db/prisma'
 import JSZip from 'jszip'
 import fs from 'fs'
 import path from 'path'
+import { validPhotoUrl, ApiError, apiError } from '@/lib/api-security'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    rateLimit(request, 'gallery-download', 15)
     const code = request.nextUrl.searchParams.get('code')
     if (!code) {
       return NextResponse.json(
@@ -19,13 +22,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
-    return handleDownload(code)
+    return await handleDownload(code)
   } catch (error) {
-    console.error('[Download API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create download' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
 
@@ -57,6 +56,7 @@ async function handleDownload(code: string) {
       )
     }
 
+    if (session.status !== 'COMPLETED' || session.paymentStatus !== 'PAID') throw new ApiError(404, 'Gallery not found')
     // Check if gallery has expired
     if (session.galleryExpiresAt && new Date() > session.galleryExpiresAt) {
       return NextResponse.json(
@@ -87,7 +87,9 @@ async function handleDownload(code: string) {
 
         if (photoUrl.startsWith('http')) {
           // External URL - fetch from web
-          const response = await fetch(photoUrl)
+          if (!validPhotoUrl(photoUrl)) throw new Error('Photo storage URL is not allowed')
+          const response = await fetch(photoUrl, { redirect: 'error', signal: AbortSignal.timeout(15000) })
+          if (Number(response.headers.get('content-length')) > 10 * 1024 * 1024) throw new Error('Photo too large')
           if (!response.ok) {
             console.warn(`Failed to fetch photo ${i + 1}: ${photoUrl}`)
             continue
@@ -95,7 +97,9 @@ async function handleDownload(code: string) {
           buffer = await response.arrayBuffer()
         } else {
           // Local file - read from filesystem
-          const filePath = path.join(process.cwd(), 'public', photoUrl.replace(/^\//, ''))
+          const root = path.resolve(process.cwd(), 'public')
+          const filePath = path.resolve(root, photoUrl.replace(/^\//, ''))
+          if (!filePath.startsWith(root + path.sep) || !/^\/?(photos|templates)\//.test(photoUrl) || !/\.(jpg|jpeg|png|webp)$/i.test(photoUrl)) throw new Error('Invalid local photo path')
 
           if (!fs.existsSync(filePath)) {
             console.warn(`Photo file not found: ${filePath}`)
@@ -114,6 +118,7 @@ async function handleDownload(code: string) {
     }
 
     // Generate ZIP buffer
+    if (Object.keys(zip.files).length === 0) throw new ApiError(502, 'Foto tidak dapat diunduh')
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
 
     // Return ZIP file
@@ -125,10 +130,6 @@ async function handleDownload(code: string) {
     })
 
   } catch (error) {
-    console.error('[Download API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create download' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
