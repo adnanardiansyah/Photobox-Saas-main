@@ -4,7 +4,8 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'SnapNext - SaaS Photo Booth Indonesia | Solusi Photo Box All-in-One',
-  description: 'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital. Sempurna untuk event, pesta, dan aktivasi marketing di Indonesia.',
+  description:
+    'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital. Sempurna untuk event, pesta, dan aktivasi marketing di Indonesia.',
   keywords: [
     'photo booth',
     'SaaS photo booth',
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     'photo booth platform',
     'multi-tenant photo booth',
     'photo booth CMS',
-    'photo booth management'
+    'photo booth management',
   ],
   authors: [{ name: 'SnapNext Team' }],
   creator: 'SnapNext',
@@ -31,12 +32,24 @@ export const metadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL('https://snapnext.id'),
+  manifest: '/site.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico?v=snapnext-brand-1', sizes: 'any' },
+      { url: '/icon.svg?v=snapnext-brand-1', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png?v=snapnext-brand-1', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-16x16.png?v=snapnext-brand-1', type: 'image/png', sizes: '16x16' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png?v=snapnext-brand-1', sizes: '180x180' }],
+    shortcut: '/favicon.ico?v=snapnext-brand-1',
+  },
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'SnapNext - SaaS Photo Booth Indonesia',
-    description: 'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
+    description:
+      'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
     url: 'https://snapnext.id',
     siteName: 'SnapNext',
     images: [
@@ -53,7 +66,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'SnapNext - SaaS Photo Booth Indonesia',
-    description: 'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
+    description:
+      'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
     images: ['/snapnext.jpg'],
   },
   robots: {
@@ -74,26 +88,17 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className="h-full">
       <head>
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        
         {/* Theme Color */}
         <meta name="theme-color" content="#a855f7" />
         <meta name="msapplication-TileColor" content="#a855f7" />
-        
+
         {/* Viewport */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-        
+
         {/* Additional SEO Meta Tags */}
         <meta name="language" content="Indonesian" />
         <meta name="geo.region" content="ID" />
@@ -102,7 +107,7 @@ export default function RootLayout({
         <meta name="coverage" content="Worldwide" />
         <meta name="distribution" content="Global" />
         <meta name="rating" content="General" />
-        
+
         {/* Structured Data for Organization */}
         <script
           type="application/ld+json"
@@ -112,8 +117,9 @@ export default function RootLayout({
               '@type': 'Organization',
               name: 'SnapNext',
               url: 'https://snapnext.id',
-              logo: 'https://snapnext.id/snapnext.jpg',
-              description: 'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
+              logo: 'https://snapnext.id/android-chrome-512x512.png',
+              description:
+                'Platform photo booth profesional dengan pembayaran QRIS, printing instan, pembuatan GIF, dan galeri digital.',
               address: {
                 '@type': 'PostalAddress',
                 addressCountry: 'ID',
@@ -133,7 +139,7 @@ export default function RootLayout({
             }),
           }}
         />
-        
+
         {/* Structured Data for Software Application */}
         <script
           type="application/ld+json"
