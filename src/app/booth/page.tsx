@@ -3,9 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useBoothStore, usePaymentStore, type Photo, type Template } from '@/lib/stores/booth-store'
 import {
-  CameraView,
-  Countdown,
-  ShutterButton,
   PaymentSelector,
   QrisDisplay,
   PhotoPreview,
@@ -18,141 +15,23 @@ import {
   CompletedScreen,
   ProcessingScreen,
 } from '@/components/booth/BoothComponents'
-import { sendGalleryNotification } from '@/lib/whatsapp-service'
+import { toast, Toaster } from 'sonner'
 import { compositeToFrame } from '@/lib/photo-compositor'
 import { useRouter } from 'next/navigation'
-
-// ============================================
-// Demo Templates
-// ============================================
-
-const demoTemplates: Template[] = [
-  {
-    id: 'ramadhan-1',
-    name: 'Ramadhan Kareem',
-    theme: 'Ramadhan',
-    imageUrl: '/photos/FRAME 5.png',
-    thumbnailUrl: '/photos/FRAME 5.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'ramadhan-2',
-    name: 'Eid Mubarak',
-    theme: 'Ramadhan',
-    imageUrl: '/photos/FRAME 4.png',
-    thumbnailUrl: '/photos/FRAME 4.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'ramadhan-3',
-    name: 'Lantern Night',
-    theme: 'Ramadhan',
-    imageUrl: '/photos/FRAME 5.png',
-    thumbnailUrl: '/photos/FRAME 5.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-korean',
-    name: 'Korean Style',
-    theme: 'Korea',
-    imageUrl: '/photos/frame-korean-1200x1800.png',
-    thumbnailUrl: '/photos/frame-korean-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-nature',
-    name: 'Natural',
-    theme: 'Nature',
-    imageUrl: '/photos/frame-nature-1200x1800.png',
-    thumbnailUrl: '/photos/frame-nature-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-night',
-    name: 'Night Sky',
-    theme: 'Night',
-    imageUrl: '/photos/frame-night-1200x1800.png',
-    thumbnailUrl: '/photos/frame-night-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-floral',
-    name: 'Floral',
-    theme: 'Flowers',
-    imageUrl: '/photos/frame-floral-1200x1800.png',
-    thumbnailUrl: '/photos/frame-floral-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-beach',
-    name: 'Beach',
-    theme: 'Beach',
-    imageUrl: '/photos/frame-beach-1200x1800.png',
-    thumbnailUrl: '/photos/frame-beach-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-  {
-    id: 'frame-retro',
-    name: 'Retro',
-    theme: 'Retro',
-    imageUrl: '/photos/frame-retro-1200x1800.png',
-    thumbnailUrl: '/photos/frame-retro-1200x1800.png',
-    slots: 6,
-    layout: 'grid-2x3',
-  },
-]
-
-// ============================================
-// Demo Config
-// ============================================
-
-const demoConfig = {
-  outletId: 'demo-outlet',
-  outletName: 'SnapNext Demo',
-  machineId: 'BOOTH-ACEH-001',
-  printEnabled: true,
-  galleryEnabled: true,
-  gifEnabled: false,
-  newspaperEnabled: false,
-  defaultPrice: 50000,
-  paymentMethods: {
-    qris: true,
-    voucher: true,
-    event: true,
-  },
-  countdownDuration: 8,
-  burstCount: 3,
-  gifFrames: 0,
-  sessionTimeout: 540,
-}
-
-// ============================================
-// Main Booth Page
-// ============================================
 
 export default function BoothPage() {
   const router = useRouter()
   const {
     session,
     config,
+    setConfig,
     startSession,
-    setCountdown,
-    addPhoto,
     setProcessing,
     setPreview,
     setPayment,
     setPaymentStatus,
     setCompleted,
     resetSession,
-    setFrame,
     setOffline,
     setCustomerPhone,
     startSessionTimer,
@@ -166,7 +45,7 @@ export default function BoothPage() {
     setSelectedFilter,
   } = useBoothStore()
 
-  const { qrisString, setQrisString, clearQris, setQrisPolling, applyVoucher, clearVoucher } = usePaymentStore()
+  const { qrisString, setQrisString, clearQris, setQrisPolling, clearVoucher } = usePaymentStore()
 
   const [showQrisModal, setShowQrisModal] = useState(false)
   const [showPrintUpsell, setShowPrintUpsell] = useState(false)
@@ -177,12 +56,60 @@ export default function BoothPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Initialize session on mount
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [ready, setReady] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [qrAmount, setQrAmount] = useState(0)
+  const serverSessionRef = useRef<string | null>(null)
+  const paymentPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollDeadlineRef = useRef(0)
+  const actionRef = useRef(false)
+  const uploadRef = useRef<Promise<string | null> | null>(null)
+  const clearPolling = () => {
+    if (paymentPollRef.current) clearInterval(paymentPollRef.current)
+    paymentPollRef.current = null
+  }
   useEffect(() => {
-    if (!session.code) {
-      startSession(demoConfig.outletId)
+    let cancelled = false
+    const init = async () => {
+      try {
+        const response = await fetch('/api/booth/session')
+        const data = await response.json()
+        if (!response.ok) { router.replace('/booth/login'); return }
+        if (cancelled) return
+        setConfig(data.config)
+        setTemplates(data.templates)
+        const previous = useBoothStore.getState().session
+        setCapturedPhotos(previous.photos || [])
+        if (previous.serverSessionId && previous.outletId === data.config.outletId) {
+          const saved = await fetch(`/api/sessions/${encodeURIComponent(previous.serverSessionId)}/photos`)
+          const savedData = await saved.json()
+          if (saved.ok) {
+            serverSessionRef.current = previous.serverSessionId
+            if (savedData.paymentStatus === 'PAID' && previous.status === 'payment') {
+              useBoothStore.setState(state => ({ session: { ...state.session, paymentStatus: 'paid', status: 'template-selection' } }))
+            } else if (savedData.paymentStatus !== 'PAID') {
+              useBoothStore.setState(state => ({ session: { ...state.session, paymentStatus: 'pending', status: 'payment' } }))
+            }
+          } else startSession(data.config.outletId)
+        } else startSession(data.config.outletId)
+        if (!cancelled) setReady(true)
+      } catch { setLoadError('Konfigurasi booth gagal dimuat. Muat ulang halaman untuk mencoba lagi.') }
     }
-  }, [])
+    init()
+    return () => { cancelled = true; clearPolling() }
+  }, [router, setConfig, startSession])
+
+  const ensureSession = async () => {
+    if (serverSessionRef.current) return serverSessionRef.current
+    const response = await fetch('/api/sessions/start', { method: 'POST' })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Gagal membuat sesi')
+    serverSessionRef.current = data.data.sessionId
+    useBoothStore.setState(state => ({ session: { ...state.session, serverSessionId: data.data.sessionId, galleryCode: data.data.galleryCode, code: data.data.sessionCode } }))
+    return data.data.sessionId as string
+  }
 
   // Handle network status
   useEffect(() => {
@@ -199,6 +126,7 @@ export default function BoothPage() {
 
   // Global Session Timer
   useEffect(() => {
+    if (!ready) return
     if (session.sessionTimerActive && session.sessionTimer > 0) {
       timerRef.current = setInterval(() => {
         decrementSessionTimer()
@@ -209,10 +137,15 @@ export default function BoothPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [session.sessionTimerActive, session.sessionTimer, decrementSessionTimer])
+  }, [ready, session.sessionTimerActive, session.sessionTimer, decrementSessionTimer])
 
   // Handle session timeout
   const handleSessionTimeout = useCallback(() => {
+    serverSessionRef.current = null
+    uploadRef.current = null
+    clearPolling()
+    clearQris()
+    clearVoucher()
     stopSessionTimer()
     setCapturedPhotos([])
     setIsCapturing(false)
@@ -221,6 +154,8 @@ export default function BoothPage() {
       session: {
         ...state.session,
         status: 'payment',
+        serverSessionId: undefined,
+        galleryCode: undefined,
         sessionTimerActive: false,
         sessionTimer: 540,
         photos: [],
@@ -285,83 +220,15 @@ export default function BoothPage() {
           console.log('[handlePhotoCapture] All 3 photos done, stopping capture')
           setIsCapturing(false)
         } else {
-          setCaptureCountdown(demoConfig.countdownDuration)
+          setCaptureCountdown(config!.countdownDuration)
         }
         return prev
       })
     }, 0)
   }, [])
 
-  // Handle payment selection
-  const handlePaymentSelect = async (method: 'qris' | 'voucher' | 'event') => {
-    setPayment(method)
-
-    if (method === 'event') {
-      setPaymentStatus('paid')
-      startSessionTimer()
-      setTemplateSelection()
-    } else if (method === 'qris') {
-      try {
-        const response = await fetch('/api/payment/qris', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: demoConfig.defaultPrice,
-            orderId: session.code,
-            customerPhone: session.customerPhone,
-          }),
-        })
-        const data = await response.json()
-        if (data.success) {
-          setQrisString(data.qrString, new Date(data.expiresAt), data.transactionRef)
-          setTransactionRef(data.transactionRef)
-          setShowQrisModal(true)
-          setQrisPolling(true)
-          startPaymentPolling(data.transactionRef)
-        }
-      } catch (error) {
-        console.error('QRIS generation failed:', error)
-        const demoQris = `demo://qris?amount=${demoConfig.defaultPrice}&order=${session.code}`
-        setQrisString(demoQris, new Date(Date.now() + 30 * 60 * 1000), `DEMO-${session.code}`)
-        setTransactionRef(`DEMO-${session.code}`)
-        setShowQrisModal(true)
-      }
-    } else if (method === 'voucher') {
-      setPaymentStatus('paid')
-      startSessionTimer()
-      setTemplateSelection()
-    }
-  }
-
-  const startPaymentPolling = (transactionRef: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/payment/status?ref=${transactionRef}`)
-        const data = await response.json()
-        if (data.status === 'success') {
-          clearInterval(pollInterval)
-          setPaymentStatus('paid')
-          setQrisPolling(false)
-          setShowQrisModal(false)
-          clearQris()
-          startSessionTimer()
-          setTemplateSelection()
-        } else if (data.status === 'failed') {
-          clearInterval(pollInterval)
-          setPaymentStatus('failed')
-          setQrisPolling(false)
-        }
-      } catch (error) {
-        console.error('Payment polling error:', error)
-      }
-    }, 3000)
-    setTimeout(() => {
-      clearInterval(pollInterval)
-      setQrisPolling(false)
-    }, 5 * 60 * 1000)
-  }
-
-  const handleQrisConfirm = () => {
+  const confirmPayment = () => {
+    clearPolling()
     setPaymentStatus('paid')
     setQrisPolling(false)
     setShowQrisModal(false)
@@ -369,12 +236,57 @@ export default function BoothPage() {
     startSessionTimer()
     setTemplateSelection()
   }
-
+  const checkPayment = async (ref: string) => {
+    const response = await fetch(`/api/payment/status?ref=${encodeURIComponent(ref)}`)
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Status pembayaran belum dapat diperiksa')
+    if (usePaymentStore.getState().transactionRef !== ref) return 'pending'
+    if (data.status === 'success') confirmPayment()
+    else if (data.status === 'failed') {
+      clearPolling(); setQrisPolling(false); setPaymentStatus('failed')
+      toast.error('Pembayaran gagal atau kedaluwarsa')
+    }
+    return data.status
+  }
+  const startPaymentPolling = (ref: string) => {
+    clearPolling()
+    pollDeadlineRef.current = Date.now() + 15 * 60 * 1000
+    paymentPollRef.current = setInterval(async () => {
+      if (Date.now() >= pollDeadlineRef.current) { clearPolling(); setQrisPolling(false); return }
+      try { await checkPayment(ref) } catch { /* Keep payment pending during provider/network errors. */ }
+    }, 3000)
+  }
+  const handlePaymentSelect = async (method: 'qris' | 'voucher' | 'event') => {
+    if (actionRef.current) return
+    actionRef.current = true; setBusy(true)
+    try {
+      setPayment(method)
+      const sessionId = await ensureSession()
+      if (method !== 'qris') {
+        const response = await fetch('/api/payment/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, method, code: usePaymentStore.getState().voucherCode }) })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Pembayaran gagal')
+        if (data.paid) { confirmPayment(); return }
+      }
+      const response = await fetch('/api/payment/qris', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Gagal membuat QRIS')
+      setQrAmount(data.amount)
+      setQrisString(data.qrString, new Date(data.expiresAt), data.transactionRef)
+      setTransactionRef(data.transactionRef)
+      setShowQrisModal(true); setQrisPolling(true)
+      startPaymentPolling(data.transactionRef)
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Pembayaran gagal') }
+    finally { actionRef.current = false; setBusy(false) }
+  }
+  const handleQrisConfirm = async () => {
+    const ref = usePaymentStore.getState().transactionRef
+    if (!ref) return
+    try { if (await checkPayment(ref) === 'pending') toast.info('Pembayaran belum dikonfirmasi oleh gateway') }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal memeriksa pembayaran') }
+  }
   const handleQrisCancel = () => {
-    setShowQrisModal(false)
-    setQrisPolling(false)
-    clearQris()
-    setPaymentStatus('pending')
+    clearPolling(); setShowQrisModal(false); setQrisPolling(false); clearQris()
   }
 
   const handleTemplateSelect = (template: Template) => {
@@ -463,6 +375,11 @@ export default function BoothPage() {
   // ============================================
   const uploadPhotosAndComplete = async () => {
     try {
+      const sessionId = await ensureSession()
+      const existingResponse = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/photos`)
+      const existing = await existingResponse.json()
+      if (!existingResponse.ok) throw new Error(existing.error || 'Sesi tidak tersedia')
+      if (existing.status === 'COMPLETED') return existing.galleryCode as string
       const validPhotos = session.photos.filter(p => p && (p.url || p.base64))
 
       if (validPhotos.length === 0) {
@@ -499,6 +416,7 @@ export default function BoothPage() {
       }
 
       const uploadedUrls: string[] = []
+      let compositeUploaded = false
 
       if (compositeBase64) {
         try {
@@ -511,13 +429,14 @@ export default function BoothPage() {
           const blob = new Blob([byteArray], { type: 'image/jpeg' })
           const formData = new FormData()
           formData.append('photo', blob, `composite-${Date.now()}.jpg`)
-          formData.append('machineId', demoConfig.machineId)
+          formData.append('sessionId', sessionId)
 
           const uploadResponse = await fetch('/api/photos/upload', { method: 'POST', body: formData })
           const uploadResult = await uploadResponse.json()
 
           if (uploadResult.success) {
             uploadedUrls.push(uploadResult.url)
+            compositeUploaded = true
             console.log('Composite uploaded:', uploadResult.url)
           } else {
             console.error('Composite upload failed:', uploadResult.error)
@@ -545,7 +464,7 @@ export default function BoothPage() {
 
             const formData = new FormData()
             formData.append('photo', blob, `photo-${Date.now()}.jpg`)
-            formData.append('machineId', demoConfig.machineId)
+            formData.append('sessionId', sessionId)
 
             const uploadResponse = await fetch('/api/photos/upload', { method: 'POST', body: formData })
             const uploadResult = await uploadResponse.json()
@@ -561,34 +480,19 @@ export default function BoothPage() {
         }
       }
 
-      if (uploadedUrls.length === 0) {
-        console.error('No photos were successfully uploaded')
+      if (uploadedUrls.length === 0 || !compositeUploaded && uploadedUrls.length !== validPhotos.length) {
+        console.error('Not all required photos were successfully uploaded')
         return null
       }
 
-      // Create session in DB
-      const sessionResponse = await fetch('/api/sessions/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ machineId: demoConfig.machineId }),
-      })
-      const sessionData = await sessionResponse.json()
-
-      if (!sessionData.success) {
-        console.error('Failed to create session:', sessionData.error)
-        return null
-      }
-
-      const { sessionId, galleryCode } = sessionData.data
-
+      const galleryCode = useBoothStore.getState().session.galleryCode!
       const updateResponse = await fetch(`/api/sessions/${sessionId}/photos`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           photos: uploadedUrls,
           status: 'COMPLETED',
-          paymentStatus: 'PAID',
-          totalPrice: demoConfig.defaultPrice,
+          frameId: session.template?.id,
         }),
       })
       const updateResult = await updateResponse.json()
@@ -606,118 +510,67 @@ export default function BoothPage() {
     }
   }
 
-  // Handle print
-  const handlePrint = async () => {
-    if (session.photos.length >= 3 && session.template) {
-      setPrinting()
-      setShowPrintUpsell(false)
-
-      try {
-        const photoUrls = session.photos.map(p => p.url || p.base64 || '').filter(Boolean)
-        const compositeUrl = await compositeToFrame(
-          session.template.imageUrl,
-          photoUrls,
-          undefined,
-          undefined,
-          session.selectedFilter && session.selectedFilter !== 'none' ? session.selectedFilter : undefined
-        )
-
-        const response = await fetch('/api/print', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: compositeUrl,
-            copies: session.printCopies || 1,
-          }),
-        })
-        const result = await response.json()
-        if (result.success) {
-          console.log('Print sent successfully:', result.message)
-        } else {
-          console.error('Print failed:', result.error)
-        }
-      } catch (error) {
-        console.error('Print error:', error)
+  const completeSession = async () => {
+    if (actionRef.current) return
+    actionRef.current = true; setBusy(true); stopSessionTimer()
+    try {
+      uploadRef.current ??= uploadPhotosAndComplete()
+      const code = await uploadRef.current
+      if (!code) throw new Error('Foto belum berhasil disimpan. Silakan coba lagi.')
+      setCompleted(code)
+      if (session.customerPhone) {
+        try {
+        const response = await fetch('/api/send-wa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phoneNumber: session.customerPhone, galleryCode: code }) })
+        if (!response.ok) toast.info('Foto tersimpan, tetapi notifikasi WhatsApp belum terkirim')
+        } catch { toast.info('Foto tersimpan, tetapi notifikasi WhatsApp belum terkirim') }
       }
-
-      setTimeout(async () => {
-        const galleryCode = await uploadPhotosAndComplete()
-        const finalCode = galleryCode || generateGalleryCode()
-        setCompleted(finalCode)
-
-        if (session.customerPhone) {
-          sendGalleryNotification({
-            phoneNumber: session.customerPhone,
-            outletName: demoConfig.outletName,
-            galleryCode: finalCode,
-            galleryUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/gallery?code=${finalCode}`,
-            photoCount: session.photos.length,
-          })
-        }
-      }, 1500)
-    }
+    } catch (error) {
+      uploadRef.current = null
+      setPreview()
+      toast.error(error instanceof Error ? error.message : 'Penyimpanan foto gagal')
+    } finally { actionRef.current = false; setBusy(false) }
   }
-
-  const handleUpdateCopies = (copies: number) => {
-    setPrintCopies(copies)
+  const handlePrint = async () => {
+    if (actionRef.current || !session.template) return
+    actionRef.current = true; setBusy(true); stopSessionTimer(); setShowPrintUpsell(false)
+    try {
+      const sessionId = await ensureSession()
+      const imageBase64 = await compositeToFrame(session.template.imageUrl, session.photos.map(p => p.url || p.base64 || ''), undefined, undefined, session.selectedFilter !== 'none' ? session.selectedFilter : undefined)
+      setPrinting()
+      const response = await fetch('/api/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, imageBase64, copies: 1 }) })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.error || 'Cetak gagal')
+      toast.success('Pekerjaan cetak diterima printer')
+    } catch (error) {
+      setPreview()
+      toast.error(error instanceof Error ? error.message : 'Cetak gagal')
+      return
+    } finally { actionRef.current = false; setBusy(false) }
+    await completeSession()
   }
-
-  const handlePrintConfirm = () => {
-    if (session.printCopies > 1) {
-      setShowAdditionalPayment(true)
-    } else {
-      handlePrint()
-    }
+  const handleUpdateCopies = (_copies: number) => {
+    setPrintCopies(1)
+    toast.info('Saat ini tersedia satu cetakan per sesi')
   }
-
-  const handleAdditionalPaymentComplete = () => {
-    setShowAdditionalPayment(false)
-    setShowPrintUpsell(false)
-    handlePrint()
-  }
-
+  const handlePrintConfirm = () => { handlePrint() }
+  const handleAdditionalPaymentComplete = () => { toast.info('Pembayaran cetak tambahan belum tersedia') }
   const handlePrintCancel = async () => {
-    setShowPrintUpsell(false)
-    setShowAdditionalPayment(false)
-    const galleryCode = await uploadPhotosAndComplete()
-    const finalCode = galleryCode || generateGalleryCode()
-    setCompleted(finalCode)
-
-    if (session.customerPhone) {
-      sendGalleryNotification({
-        phoneNumber: session.customerPhone,
-        outletName: demoConfig.outletName,
-        galleryCode: finalCode,
-        galleryUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/gallery?code=${finalCode}`,
-        photoCount: session.photos.length,
-      })
-    }
+    setShowPrintUpsell(false); setShowAdditionalPayment(false)
+    await completeSession()
   }
-
   const handleDone = () => {
-    resetSession()
-    stopSessionTimer()
-    setCapturedPhotos([])
-    useBoothStore.setState((state) => ({
-      session: {
-        ...state.session,
-        status: 'payment',
-        paymentMethod: null,
-        paymentStatus: 'pending',
-        photos: [],
-        currentPhotoIndex: 0,
-        galleryCode: undefined,
-      },
-    }))
+    clearPolling(); clearQris(); clearVoucher()
+    serverSessionRef.current = null; uploadRef.current = null
+    resetSession(); stopSessionTimer(); setCapturedPhotos([])
+    startSession(config!.outletId)
   }
-
-  const generateGalleryCode = () => {
-    return `${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-  }
+  if (!ready || !config) return <main className="min-h-screen bg-black text-white flex flex-col gap-4 items-center justify-center"><p>{loadError || 'Memuat konfigurasi booth...'}</p>{loadError && <button onClick={() => window.location.reload()} className="rounded-xl bg-purple-600 p-3">Coba lagi</button>}</main>
 
   return (
     <div className="min-h-screen bg-black overflow-hidden">
+      <Toaster richColors />
       <OfflineBanner />
+      {busy && <div className="fixed inset-0 bg-black/70 text-white flex items-center justify-center z-[100]" role="status">Memproses...</div>}
 
       <SessionTimer
         seconds={session.sessionTimer}
@@ -726,18 +579,20 @@ export default function BoothPage() {
 
       {session.status === 'payment' && (
         <PaymentSelector
-          totalPrice={demoConfig.defaultPrice}
+          totalPrice={config!.defaultPrice}
           onSelect={handlePaymentSelect}
-          config={demoConfig.paymentMethods}
+          config={config!.paymentMethods}
           customerPhone={session.customerPhone || ''}
           onPhoneChange={setCustomerPhone}
         />
       )}
 
+      {session.status === 'payment' && <button onClick={handleDone} className="fixed bottom-4 right-4 z-[60] rounded-xl bg-white/90 p-3 text-purple-900">Mulai sesi baru</button>}
+
       {showQrisModal && qrisString && (
         <QrisDisplay
           qrString={qrisString}
-          amount={demoConfig.defaultPrice}
+          amount={qrAmount}
           onComplete={handleQrisConfirm}
           onCancel={handleQrisCancel}
         />
@@ -745,7 +600,7 @@ export default function BoothPage() {
 
       {session.status === 'template-selection' && (
         <TemplateSelector
-          templates={demoTemplates}
+          templates={templates}
           onSelect={handleTemplateSelect}
           sessionTimerActive={session.sessionTimerActive}
           sessionTimerSeconds={session.sessionTimer}
@@ -781,8 +636,8 @@ export default function BoothPage() {
           photos={session.photos}
           template={session.template}
           onRetake={handleRetake}
-          onPrint={() => setShowPrintUpsell(true)}
-          onContinue={() => setShowPrintUpsell(true)}
+          onPrint={config.printEnabled ? () => setShowPrintUpsell(true) : handlePrintCancel}
+          onContinue={handlePrintCancel}
         />
       )}
 
