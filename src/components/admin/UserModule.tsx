@@ -1,5 +1,7 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
 import {
   Plus,
@@ -180,7 +182,7 @@ function UserForm({ open, user, onClose, onSubmit }: UserFormProps) {
 }
 
 export function UserModule() {
-  const { searchQuery } = useDashboardStore()
+  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
   const [users, setUsers] = useState<UserData[]>([])
   const [outlets, setOutlets] = useState<OutletOption[]>([])
   const [loading, setLoading] = useState(true)
