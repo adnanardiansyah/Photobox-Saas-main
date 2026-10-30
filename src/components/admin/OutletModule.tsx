@@ -29,6 +29,7 @@ interface OutletData {
   isActive: boolean
   machineId: string
   createdAt: string
+  config?: { priceDefault: number; printEnabled: boolean; paymentMethods: { qris: boolean; voucher: boolean } }
 }
 
 interface OutletFormProps {
@@ -43,6 +44,7 @@ interface OutletFormProps {
     longitude: number
     isActive: boolean
     machineId: string
+    config: { priceDefault: number; printEnabled: boolean; paymentMethods: { qris: boolean; voucher: boolean } }
   }) => void
 }
 
@@ -54,7 +56,8 @@ function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
     latitude: outlet?.latitude ?? 0,
     longitude: outlet?.longitude ?? 0,
     isActive: outlet?.isActive ?? true,
-    machineId: outlet?.machineId || ''
+    machineId: outlet?.machineId || '',
+    config: { priceDefault: outlet?.config?.priceDefault ?? 25000, printEnabled: outlet?.config?.printEnabled ?? false, paymentMethods: { qris: outlet?.config?.paymentMethods?.qris ?? true, voucher: outlet?.config?.paymentMethods?.voucher ?? true } }
   })
 
   useEffect(() => {
@@ -65,7 +68,8 @@ function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
       latitude: outlet?.latitude ?? 0,
       longitude: outlet?.longitude ?? 0,
       isActive: outlet?.isActive ?? true,
-      machineId: outlet?.machineId || ''
+      machineId: outlet?.machineId || '',
+    config: { priceDefault: outlet?.config?.priceDefault ?? 25000, printEnabled: outlet?.config?.printEnabled ?? false, paymentMethods: { qris: outlet?.config?.paymentMethods?.qris ?? true, voucher: outlet?.config?.paymentMethods?.voucher ?? true } }
     })
   }, [outlet])
 
@@ -147,6 +151,11 @@ function OutletForm({ open, outlet, onClose, onSubmit }: OutletFormProps) {
             />
           </Field>
 
+          <Field label="Harga sesi (Rp)" required><Input type="number" min="0" step="1" value={formData.config.priceDefault} onChange={e => setFormData({ ...formData, config: { ...formData.config, priceDefault: Number(e.target.value) } })} /></Field>
+          <Switch checked={formData.config.printEnabled} onChange={checked => setFormData({ ...formData, config: { ...formData.config, printEnabled: checked } })} label="Aktifkan cetak" description="Memerlukan printer jaringan ESC/POS yang dikonfigurasi di server." />
+          <Switch checked={formData.config.paymentMethods.qris} onChange={checked => setFormData({ ...formData, config: { ...formData.config, paymentMethods: { ...formData.config.paymentMethods, qris: checked } } })} label="QRIS" />
+          <Switch checked={formData.config.paymentMethods.voucher} onChange={checked => setFormData({ ...formData, config: { ...formData.config, paymentMethods: { ...formData.config.paymentMethods, voucher: checked } } })} label="Voucher" />
+
           <Switch
             checked={formData.isActive}
             onChange={(checked) => setFormData({ ...formData, isActive: checked })}
@@ -205,6 +214,15 @@ export function OutletModule() {
   }
 
   useEffect(() => { fetchOutlets() }, [])
+
+  const createDeviceKey = async (outletId: string) => {
+    try {
+      const response = await fetch('/api/admin/booth-keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outletId }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Gagal membuat key')
+      window.prompt(`Simpan API key untuk ${result.machineId}. Key hanya ditampilkan sekali.`, result.apiKey)
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal membuat key') }
+  }
 
   const handleCreate = async (formData: any) => {
     const res = await fetch('/api/admin/outlets', {
@@ -337,6 +355,7 @@ export function OutletModule() {
             </div>
 
             <div className="flex gap-2">
+              <button className="px-3 py-2 rounded-lg border text-sm" onClick={() => createDeviceKey(outlet.id)}>Buat API key</button>
               <button
                 onClick={() => {
                   setEditingOutlet(outlet)
