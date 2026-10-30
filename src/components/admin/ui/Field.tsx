@@ -1,5 +1,6 @@
 'use client'
 
+import { Children, cloneElement, isValidElement, useId, type ReactElement } from 'react'
 import { Check } from 'lucide-react'
 
 // ============================================
@@ -44,12 +45,7 @@ export function Select({ className = '', children, ...props }: SelectProps) {
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 export function Textarea({ className = '', ...props }: TextareaProps) {
-  return (
-    <textarea
-      className={`${base} h-auto py-2.5 resize-none ${className}`}
-      {...props}
-    />
-  )
+  return <textarea className={`${base} h-auto py-2.5 resize-none ${className}`} {...props} />
 }
 
 interface SwitchProps {
@@ -69,8 +65,14 @@ export function Switch({ checked, onChange, label, description }: SwitchProps) {
     >
       {(label || description) && (
         <span className="text-left">
-          {label && <span className="block text-sm font-medium text-gray-900 dark:text-white">{label}</span>}
-          {description && <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</span>}
+          {label && (
+            <span className="block text-sm font-medium text-gray-900 dark:text-white">{label}</span>
+          )}
+          {description && (
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {description}
+            </span>
+          )}
         </span>
       )}
 
@@ -100,15 +102,31 @@ interface FieldProps {
   children: React.ReactNode
 }
 export function Field({ label, htmlFor, required, hint, className = '', children }: FieldProps) {
+  const generatedId = useId()
+  const fieldId = htmlFor || generatedId
+  const hintId = `${fieldId}-hint`
+  const content = Children.map(children, (child) => {
+    if (!isValidElement(child) || ![Input, Select, Textarea].includes(child.type as any))
+      return child
+    const element = child as ReactElement<{ id?: string; 'aria-describedby'?: string }>
+    return cloneElement(element, {
+      id: htmlFor || element.props.id || fieldId,
+      'aria-describedby': hint ? hintId : element.props['aria-describedby'],
+    })
+  })
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label htmlFor={htmlFor} className="block">
+        <label htmlFor={fieldId} className="block">
           <Label required={required}>{label}</Label>
         </label>
       )}
-      {children}
-      {hint && <p className="text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
+      {content}
+      {hint && (
+        <p id={hintId} className="text-xs text-gray-400 dark:text-gray-500">
+          {hint}
+        </p>
+      )}
     </div>
   )
 }
