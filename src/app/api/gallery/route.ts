@@ -4,11 +4,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
+import { rateLimit } from '@/lib/rate-limit'
+import { apiError } from '@/lib/api-security'
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    rateLimit(request, 'gallery-lookup', 30)
     const code = request.nextUrl.searchParams.get('code')
 
     if (!code) {
@@ -27,7 +30,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    if (!session) {
+    if (!session || session.status !== 'COMPLETED' || session.paymentStatus !== 'PAID') {
       return NextResponse.json(
         { success: false, error: 'Gallery not found' },
         { status: 404 }
@@ -61,10 +64,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Gallery API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch gallery' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
