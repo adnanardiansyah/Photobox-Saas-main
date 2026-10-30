@@ -1,59 +1,13 @@
-// ============================================
-// Start New Photo Session API
-// Creates a new session with unique gallery code
-// ============================================
-
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rate-limit'
 import { createNewPhotoSession } from '@/lib/gallery-code-generator'
-import { prisma } from '@/lib/db/prisma'
-
+import { requireBooth, apiError, ApiError } from '@/lib/api-security'
 export async function POST(request: NextRequest) {
   try {
-    const { outletId, frameId, machineId } = await request.json()
-
-    if (!outletId && !machineId) {
-      return NextResponse.json(
-        { success: false, error: 'outletId or machineId is required' },
-        { status: 400 }
-      )
-    }
-
-    let targetOutletId = outletId
-
-    // If machineId provided, find outlet by machineId
-    if (machineId && !outletId) {
-      const outlet = await prisma.outlet.findUnique({
-        where: { machineId },
-      })
-
-      if (!outlet) {
-        return NextResponse.json(
-          { success: false, error: 'Outlet not found for machineId' },
-          { status: 404 }
-        )
-      }
-
-      targetOutletId = outlet.id
-    }
-
-    // Create new session
-    const session = await createNewPhotoSession(targetOutletId, frameId)
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        sessionId: session.id,
-        sessionCode: session.sessionCode,
-        galleryCode: session.galleryCode,
-        galleryUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/gallery?code=${session.galleryCode}`,
-        expiresAt: session.galleryExpiresAt,
-      },
-    })
-  } catch (error) {
-    console.error('[New Session API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create new session' },
-      { status: 500 }
-    )
-  }
+    const outlet = await requireBooth(request)
+    rateLimit(request, `start:${outlet.id}`, 10)
+    if (!outlet.config) throw new ApiError(409, 'Konfigurasi outlet belum tersedia')
+    const session = await createNewPhotoSession(outlet.id, undefined, outlet.config.priceDefault)
+    return NextResponse.json({ success: true, data: { sessionId: session.id, sessionCode: session.sessionCode, galleryCode: session.galleryCode, expiresAt: session.galleryExpiresAt } })
+  } catch (error) { return apiError(error) }
 }
