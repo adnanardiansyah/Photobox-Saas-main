@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
+import { checkOrigin, apiError } from '@/lib/api-security'
+import { rateLimit } from '@/lib/rate-limit'
 import { verifyPassword, signAuthToken, getAuthCookieName } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    checkOrigin(request)
+    rateLimit(request, 'admin-login', 10, 15 * 60000)
     const body = await request.json()
     const { email, password } = body
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password || email.length > 254 || password.length > 256) {
       return NextResponse.json(
         { success: false, error: 'Email and password are required' },
         { status: 400 }
@@ -26,10 +30,11 @@ export async function POST(request: NextRequest) {
         tenantId: true,
         passwordHash: true,
         isActive: true,
+        tenant: { select: { isActive: true } },
       },
     })
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.tenant.isActive || !['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(user.role)) {
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -72,10 +77,6 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('[Admin Login] error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Login failed' },
-      { status: 500 }
-    )
+    return apiError(error)
   }
 }
