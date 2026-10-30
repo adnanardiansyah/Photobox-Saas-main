@@ -1,5 +1,7 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
 import {
   Plus,
@@ -12,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input, Select, Switch } from './ui/Field'
 
@@ -150,7 +152,7 @@ function TemplateForm({ open, template, onClose, onSubmit }: TemplateFormProps) 
 }
 
 export function TemplateModule() {
-  const { searchQuery } = useDashboardStore()
+  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
   const [templates, setTemplates] = useState<TemplateData[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -297,10 +299,8 @@ export function TemplateModule() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredTemplates.map((template) => (
-          <motion.div
+          <div
             key={template.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border dark:border-gray-800"
           >
             <div className="aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
@@ -357,7 +357,7 @@ export function TemplateModule() {
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
