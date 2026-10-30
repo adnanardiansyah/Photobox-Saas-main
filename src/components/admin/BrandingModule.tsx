@@ -1,374 +1,141 @@
 'use client'
-
-import { useShallow } from 'zustand/react/shallow'
-
 import { useEffect, useState } from 'react'
-import {
-  Palette,
-  Image as ImageIcon,
-  Type,
-  Save,
-  Upload,
-  Loader2
-} from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
+import { adminRequest } from '@/lib/admin-client'
+import { useAdminForm } from './ui/useAdminForm'
+import { ImageUpload } from './ui/ImageUpload'
+import { Field, Input } from './ui/Field'
+import { useCanManage, WriteAccess } from './ui/WriteAccess'
 import { toast } from 'sonner'
-
-
-// ============================================
-// Branding Module Component
-// Upload logo & hero banner ke Supabase Storage
-// ============================================
-
 export function BrandingModule() {
-  const { branding, updateBranding } = useDashboardStore(useShallow(state => ({ branding: state.branding, updateBranding: state.updateBranding })))
-  const [formData, setFormData] = useState({
-    logoUrl: branding.logoUrl,
-    primaryColor: branding.primaryColor,
-    secondaryColor: branding.secondaryColor,
-    heroBannerUrl: branding.heroBannerUrl,
-    companyName: branding.companyName,
-    tagline: branding.tagline
-  })
-  const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [uploadingBanner, setUploadingBanner] = useState(false)
-
-  // Upload file ke Supabase Storage via API
-  const uploadToStorage = async (file: File, folder: string): Promise<string | null> => {
-    try {
-      const formDataUpload = new FormData()
-      formDataUpload.append('photo', file, file.name)
-      formDataUpload.append('assetFolder', folder)
-
-      const response = await fetch('/api/photos/upload', {
-        method: 'POST',
-        body: formDataUpload,
-      })
-
-      const result = await response.json()
-      if (result.success) {
-        return result.url
-      } else {
-        console.error('Upload failed:', result.error)
-        return null
-      }
-    } catch (error) {
-      console.error('Upload error:', error)
-      return null
-    }
-  }
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Preview lokal dulu
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setFormData(prev => ({ ...prev, logoUrl: reader.result as string }))
-    }
-    reader.readAsDataURL(file)
-
-    // Upload ke Supabase Storage
-    setUploadingLogo(true)
-    const url = await uploadToStorage(file, 'brand-logo')
-    setUploadingLogo(false)
-
-    if (url) {
-      setFormData(prev => ({ ...prev, logoUrl: url }))
-      toast.success('Logo uploaded!')
-    } else {
-      toast.error('Upload logo gagal, menggunakan preview lokal')
-    }
-  }
-
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Preview lokal dulu
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setFormData(prev => ({ ...prev, heroBannerUrl: reader.result as string }))
-    }
-    reader.readAsDataURL(file)
-
-    // Upload ke Supabase Storage
-    setUploadingBanner(true)
-    const url = await uploadToStorage(file, 'brand-banner')
-    setUploadingBanner(false)
-
-    if (url) {
-      setFormData(prev => ({ ...prev, heroBannerUrl: url }))
-      toast.success('Banner uploaded!')
-    } else {
-      toast.error('Upload banner gagal, menggunakan preview lokal')
-    }
-  }
-
-  useEffect(() => { setFormData(branding) }, [branding])
-  const handleSave = async () => {
-    try {
-      const response = await fetch('/api/admin/branding', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Gagal menyimpan branding')
-      await useDashboardStore.getState().refreshDashboard()
-      toast.success('Branding tersimpan')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal menyimpan branding') }
-  }
-
-  const handleColorChange = (field: 'primaryColor' | 'secondaryColor', value: string) => {
-    setFormData({ ...formData, [field]: value })
-  }
-
+  const branding = useDashboardStore((s) => s.branding)
+  const canManage = useCanManage()
+  const [formData, setFormData] = useState(branding)
+  const [uploading, setUploading] = useState(false)
+  const { saving, error, submit } = useAdminForm(true, () => {})
+  useEffect(() => {
+    setFormData(branding)
+  }, [branding])
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void submit(async () => {
+          if (!canManage) throw new Error('Akun ini hanya memiliki akses baca')
+          if (uploading) throw new Error('Tunggu unggahan gambar selesai')
+          await adminRequest('/api/admin/branding', {
+            method: 'PUT',
+            body: JSON.stringify(formData),
+          })
+          toast.success('Identitas usaha berhasil disimpan')
+          void useDashboardStore
+            .getState()
+            .refreshDashboard()
+            .catch(() => toast.info('Data tersimpan. Muat ulang menu untuk memperbarui tampilan.'))
+        })
+      }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Branding & CMS</h1>
-          <p className="text-gray-500 dark:text-gray-400">Customize your brand appearance and content</p>
+          <h1 className="text-2xl font-bold">Identitas usaha</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Nama, warna utama, dan gambar yang ditampilkan untuk usaha Anda.
+          </p>
         </div>
-        <button
-          onClick={handleSave}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-        >
-          <Save className="w-4 h-4" />
-          Save Changes
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Company Info */}
-        <div
-          className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-        >
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-            <Type className="w-5 h-5 text-purple-500" />
-            Company Information
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Company Name</label>
-              <input
-                type="text"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Tagline (default)</label>
-              <input
-                type="text"
-                disabled value={formData.tagline}
-                onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Colors */}
-        <div
-          className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-        >
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-            <Palette className="w-5 h-5 text-purple-500" />
-            Brand Colors
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Primary Color</label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  value={formData.primaryColor}
-                  onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                  className="w-12 h-10 rounded-lg border dark:border-gray-700 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={formData.primaryColor}
-                  onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Secondary Color (default)</label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  disabled value={formData.secondaryColor}
-                  onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                  className="w-12 h-10 rounded-lg border dark:border-gray-700 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  disabled value={formData.secondaryColor}
-                  onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Preview</label>
-              <div className="flex gap-2">
-                <div className="w-16 h-16 rounded-lg shadow-sm" style={{ backgroundColor: formData.primaryColor }} />
-                <div className="w-16 h-16 rounded-lg shadow-sm" style={{ backgroundColor: formData.secondaryColor }} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Logo */}
-        <div
-          className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-        >
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-            <ImageIcon className="w-5 h-5 text-purple-500" />
-            Logo
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Upload Logo</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  disabled={uploadingLogo}
-                  className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-                />
-                {uploadingLogo && (
-                  <div className="absolute right-3 top-2.5">
-                    <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                  </div>
-                )}
-              </div>
-              {uploadingLogo && (
-                <p className="mt-1 text-sm text-purple-500">Uploading...</p>
-              )}
-            </div>
-
-            <div className="pt-2">
-              <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Preview</label>
-              <div className="w-32 h-32 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                {formData.logoUrl ? (
-                  <img
-                    src={formData.logoUrl}
-                    alt="Logo Preview"
-                    className="max-w-full max-h-full object-contain"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                ) : (
-                  <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-300" />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero Banner */}
-        <div
-          className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-        >
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-            <Upload className="w-5 h-5 text-purple-500" />
-            Hero Banner
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Upload Banner</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBannerUpload}
-                  disabled={uploadingBanner}
-                  className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-                />
-                {uploadingBanner && (
-                  <div className="absolute right-3 top-2.5">
-                    <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                  </div>
-                )}
-              </div>
-              {uploadingBanner && (
-                <p className="mt-1 text-sm text-purple-500">Uploading...</p>
-              )}
-            </div>
-
-            <div className="pt-2">
-              <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Preview</label>
-              <div className="w-full h-32 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                {formData.heroBannerUrl ? (
-                  <img
-                    src={formData.heroBannerUrl}
-                    alt="Banner Preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                ) : (
-                  <div className="text-center text-gray-400 dark:text-gray-600">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-2" />
-                    <p className="text-sm">Upload banner untuk preview</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Live Preview */}
-      <div
-        className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-      >
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Live Preview</h2>
-
-        <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
-          <div
-            className="h-16 flex items-center px-6"
-            style={{ backgroundColor: formData.primaryColor }}
+        <WriteAccess>
+          <button
+            type="submit"
+            disabled={saving || uploading}
+            className="rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
           >
+            {saving ? 'Menyimpan...' : uploading ? 'Mengunggah...' : 'Simpan perubahan'}
+          </button>
+        </WriteAccess>
+      </div>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+      <fieldset disabled={!canManage || saving || uploading} className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <Field label="Nama usaha" required>
+            <Input
+              value={formData.companyName}
+              onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+              required
+              maxLength={100}
+            />
+          </Field>
+          <Field label="Warna utama">
             <div className="flex items-center gap-3">
-              {formData.logoUrl && (
-                <img
-                  src={formData.logoUrl}
-                  alt="Logo"
-                  className="h-8 w-auto"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
-              )}
-              <span className="text-white font-bold">{formData.companyName}</span>
+              <input
+                aria-label="Pilih warna utama"
+                type="color"
+                value={formData.primaryColor}
+                onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                className="h-10 w-12 rounded-lg"
+              />
+              <Input
+                aria-label="Kode warna utama"
+                value={formData.primaryColor}
+                onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                pattern="#[0-9a-fA-F]{6}"
+              />
             </div>
-          </div>
-
-          <div
-            className="h-48 flex items-center justify-center relative"
-            style={{
-              background: formData.heroBannerUrl
-                ? `url(${formData.heroBannerUrl}) center/cover`
-                : `linear-gradient(135deg, ${formData.primaryColor}, ${formData.secondaryColor})`
-            }}
-          >
-            <div className="text-center text-white z-10 relative">
-              <h3 className="text-2xl font-bold mb-2">{formData.companyName}</h3>
-              <p className="text-lg opacity-90">{formData.tagline}</p>
-            </div>
-            <div className="absolute inset-0 bg-black/30" />
-          </div>
+          </Field>
+          <p className="text-xs text-gray-500">
+            Warna sekunder dan tagline menggunakan nilai bawaan aplikasi.
+          </p>
         </div>
-      </div>
-    </div>
+        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="font-semibold">Logo usaha</h2>
+          <ImageUpload
+            folder="brand-logo"
+            value={formData.logoUrl ? [formData.logoUrl] : []}
+            onChange={(urls) => setFormData((s) => ({ ...s, logoUrl: urls[0] || '' }))}
+            disabled={!canManage || saving}
+            onBusyChange={setUploading}
+          />
+        </div>
+        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 lg:col-span-2 dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="font-semibold">Gambar utama halaman publik</h2>
+          <ImageUpload
+            folder="brand-banner"
+            value={formData.heroBannerUrl ? [formData.heroBannerUrl] : []}
+            onChange={(urls) => setFormData((s) => ({ ...s, heroBannerUrl: urls[0] || '' }))}
+            disabled={!canManage || saving}
+            onBusyChange={setUploading}
+          />
+        </div>
+      </fieldset>
+      <section className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
+        <h2
+          className="px-5 py-3 text-sm font-medium text-white"
+          style={{ backgroundColor: formData.primaryColor }}
+        >
+          Pratinjau ? {formData.companyName}
+        </h2>
+        <div className="bg-white p-6 text-center dark:bg-gray-900">
+          {formData.logoUrl && (
+            <img
+              src={formData.logoUrl}
+              alt="Pratinjau logo usaha"
+              className="mx-auto mb-4 h-16 max-w-full object-contain"
+            />
+          )}
+          <p className="text-xl font-semibold">{formData.companyName}</p>
+          <p className="mt-1 text-sm text-gray-500">{formData.tagline}</p>
+          {formData.heroBannerUrl && (
+            <img
+              src={formData.heroBannerUrl}
+              alt="Pratinjau gambar utama"
+              className="mx-auto mt-4 max-h-56 w-full rounded-xl object-cover"
+            />
+          )}
+        </div>
+      </section>
+    </form>
   )
 }
