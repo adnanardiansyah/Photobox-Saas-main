@@ -35,6 +35,7 @@ export interface Template {
 }
 
 export interface BoothSession {
+  serverSessionId?: string
   id: string
   code: string
   outletId: string
@@ -355,26 +356,7 @@ export const useBoothStore = create<BoothState>()(
       },
 
       decrementSessionTimer: () => {
-        set((state) => {
-          const newTimer = state.session.sessionTimer - 1
-          if (newTimer <= 0) {
-            // Timer expired - reset to payment
-            return {
-              session: {
-                ...initialSession,
-                outletId: state.session.outletId,
-                id: state.session.id,
-                code: state.session.code,
-              },
-            }
-          }
-          return {
-            session: {
-              ...state.session,
-              sessionTimer: newTimer,
-            },
-          }
-        })
+        set(state => ({ session: { ...state.session, sessionTimer: Math.max(0, state.session.sessionTimer - 1) } }))
       },
 
       // Print Actions
@@ -407,17 +389,10 @@ export const useBoothStore = create<BoothState>()(
     }),
     {
       name: 'snapnext-booth-storage',
-      partialize: (state) => ({
-        session: {
-          status: state.session.status,
-          isOffline: state.session.isOffline,
-          photos: state.session.photos,
-          sessionTimer: state.session.sessionTimer,
-          sessionTimerActive: state.session.sessionTimerActive,
-          galleryCode: state.session.galleryCode,
-          customerPhone: state.session.customerPhone,
-        },
-      }),
+      partialize: (state) => ({ session: state.session }),
+      version: 2,
+      migrate: () => ({ session: initialSession }),
+
     }
   )
 )
