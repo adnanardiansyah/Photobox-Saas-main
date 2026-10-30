@@ -1,10 +1,12 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
 import { Plus, Search, Eye, Copy, Check, RefreshCw, Loader2, QrCode, X } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input } from './ui/Field'
 
@@ -21,7 +23,7 @@ interface GalleryData {
 }
 
 export function GalleryModule() {
-  const { searchQuery } = useDashboardStore()
+  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
   const [galleries, setGalleries] = useState<GalleryData[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -105,11 +107,8 @@ export function GalleryModule() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredGalleries.map((gallery, i) => (
-          <motion.div
+          <div
             key={gallery.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03 }}
             className="bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-800 overflow-hidden"
           >
             <div className="p-4">
@@ -177,21 +176,19 @@ export function GalleryModule() {
                 <span>{new Date(gallery.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {filteredGalleries.length === 0 && !loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+        <div
           className="text-center py-12"
         >
           <QrCode className="w-16 h-16 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
             {searchQuery ? 'No galleries match your search' : 'No galleries found'}
           </p>
-        </motion.div>
+        </div>
       )}
 
       <AddGalleryModal
