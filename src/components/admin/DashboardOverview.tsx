@@ -15,6 +15,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
+import { WriteAccess } from './ui/WriteAccess'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -90,7 +91,7 @@ function MiniCard({
         {active.toLocaleString('id-ID')}{' '}
         <span className="text-lg font-medium text-gray-400">/ {total.toLocaleString('id-ID')}</span>
       </p>
-      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Active {label.toLowerCase()}</p>
+      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Aktif {label.toLowerCase()}</p>
       <div className="h-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
         <div
           className="h-full rounded-full"
@@ -141,28 +142,28 @@ export function DashboardOverview() {
   const activeOutlets = outlets.filter((outlet) => outlet.status === 'online').length
   const statCards = [
     {
-      title: 'Total Outlets',
+      title: 'Total outlet',
       value: outlets.length.toLocaleString('id-ID'),
       caption: 'Outlet terdaftar',
       icon: Store,
       color: '#3b82f6',
     },
     {
-      title: 'Online Outlets',
+      title: 'Outlet online',
       value: activeOutlets.toLocaleString('id-ID'),
-      caption: 'Currently active',
+      caption: 'Sedang aktif',
       icon: Wifi,
       color: '#22c55e',
     },
     {
-      title: 'Revenue Today',
+      title: 'Pendapatan hari ini',
       value: currency.format(todayRevenue),
       caption: 'Transaksi terkonfirmasi hari ini',
       icon: DollarSign,
       color: '#a855f7',
     },
     {
-      title: 'Photos Today',
+      title: 'Foto hari ini',
       value: photosToday.toLocaleString('id-ID'),
       caption: 'Foto tersimpan hari ini',
       icon: Camera,
@@ -172,54 +173,54 @@ export function DashboardOverview() {
   const miniCards = [
     {
       icon: Image,
-      label: 'Templates',
+      label: 'Template',
       active: templates.filter((t) => t.isActive).length,
       total: templates.length,
       color: '#3b82f6',
     },
     {
       icon: Users,
-      label: 'Users',
+      label: 'Tim',
       active: users.filter((u) => u.status === 'active').length,
       total: users.length,
       color: '#22c55e',
     },
     {
       icon: Gift,
-      label: 'Vouchers',
+      label: 'Voucher',
       active: vouchers.filter((v) => v.isActive).length,
       total: vouchers.length,
       color: '#a855f7',
     },
     {
       icon: Store,
-      label: 'Outlets',
+      label: 'Outlet',
       active: activeOutlets,
       total: outlets.length,
       color: '#ec4899',
     },
   ]
   const actions = [
-    { icon: Store, label: 'Add Outlet', module: 'outlets', color: '#3b82f6' },
-    { icon: Gift, label: 'Create Voucher', module: 'vouchers', color: '#a855f7' },
-    { icon: Image, label: 'Upload Template', module: 'templates', color: '#22c55e' },
-    { icon: Users, label: 'Add Testimonial', module: 'testimonials', color: '#ec4899' },
+    { icon: Store, label: 'Tambah outlet', module: 'outlets', color: '#3b82f6' },
+    { icon: Gift, label: 'Buat voucher', module: 'vouchers', color: '#a855f7' },
+    { icon: Image, label: 'Unggah template', module: 'templates', color: '#22c55e' },
+    { icon: Users, label: 'Tambah testimoni', module: 'testimonials', color: '#ec4899' },
   ]
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-purple-600 dark:text-purple-400">
-            Overview
+            Ringkasan
           </p>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">Ringkasan</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Welcome back! Here's your overview.
+            Pantau ringkasan operasional usaha Anda.
           </p>
         </div>
         <span className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
           <Activity className="h-3.5 w-3.5" />
-          Overview
+          Ringkasan
         </span>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -235,12 +236,12 @@ export function DashboardOverview() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className={panelClass}>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Recent Transactions</h2>
+            <h2 className="font-semibold">Transaksi terbaru</h2>
             <button
               onClick={() => useDashboardStore.getState().setActiveModule('reports')}
               className="flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400"
             >
-              View all <ArrowRight className="h-3 w-3" />
+              Lihat semua <ArrowRight className="h-3 w-3" />
             </button>
           </div>
           {transactions.slice(0, 4).map((tx) => (
@@ -251,7 +252,7 @@ export function DashboardOverview() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{tx.id}</p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  {outletNames.get(tx.outletId) || 'Unknown'}
+                  {outletNames.get(tx.outletId) || 'Tidak diketahui'}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -270,7 +271,7 @@ export function DashboardOverview() {
         </section>
         <section className={panelClass}>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Booth Status</h2>
+            <h2 className="font-semibold">Status booth</h2>
             <span className="text-xs text-gray-500 dark:text-gray-400">{activeOutlets} online</span>
           </div>
           <div className="max-h-80 overflow-y-auto">
@@ -290,7 +291,7 @@ export function DashboardOverview() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{booth.name}</p>
                       <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        Last heartbeat: {formatTime(booth.lastPhoto)}
+                        Kabar perangkat terakhir: {formatTime(booth.lastPhoto)}
                       </p>
                     </div>
                   </div>
@@ -308,26 +309,28 @@ export function DashboardOverview() {
           )}
         </section>
       </div>
-      <section className={panelClass}>
-        <h2 className="mb-4 font-semibold">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {actions.map(({ icon: Icon, label, module, color }) => (
-            <button
-              key={module}
-              onClick={() => useDashboardStore.getState().setActiveModule(module)}
-              className="group flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-200 p-5 text-sm font-medium text-gray-600 transition-colors duration-150 hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-gray-700 dark:text-gray-300 dark:hover:border-purple-500 dark:hover:bg-purple-500/10"
-            >
-              <span
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ color, backgroundColor: `${color}15` }}
+      <WriteAccess>
+        <section className={panelClass}>
+          <h2 className="mb-4 font-semibold">Tindakan cepat</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {actions.map(({ icon: Icon, label, module, color }) => (
+              <button
+                key={module}
+                onClick={() => useDashboardStore.getState().setActiveModule(module)}
+                className="group flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-200 p-5 text-sm font-medium text-gray-600 transition-colors duration-150 hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-gray-700 dark:text-gray-300 dark:hover:border-purple-500 dark:hover:bg-purple-500/10"
               >
-                <Icon className="h-5 w-5" />
-              </span>
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ color, backgroundColor: `${color}15` }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+      </WriteAccess>
     </div>
   )
 }
