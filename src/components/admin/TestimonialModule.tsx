@@ -1,5 +1,7 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
 import {
   Plus,
@@ -14,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input, Select, Textarea, Switch } from './ui/Field'
 
@@ -173,7 +175,7 @@ function TestimonialForm({ open, testimonial, onClose, onSubmit }: TestimonialFo
 }
 
 export function TestimonialModule() {
-  const { searchQuery } = useDashboardStore()
+  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([])
   const [outlets, setOutlets] = useState<OutletOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -353,10 +355,8 @@ export function TestimonialModule() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTestimonials.map((testimonial) => (
-          <motion.div
+          <div
             key={testimonial.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm border dark:border-gray-800"
           >
             <div className="flex items-start justify-between mb-3">
@@ -432,7 +432,7 @@ export function TestimonialModule() {
                 <span className="text-gray-900 dark:text-white">Delete</span>
               </button>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
