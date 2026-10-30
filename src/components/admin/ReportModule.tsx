@@ -1,9 +1,11 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useMemo } from 'react'
-import { 
-  BarChart3, 
-  TrendingUp, 
+import {
+  BarChart3,
+  TrendingUp,
   TrendingDown,
   DollarSign,
   Camera,
@@ -11,14 +13,14 @@ import {
   Download,
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
-import { motion } from 'framer-motion'
+
 
 // ============================================
 // Report Module Component
 // ============================================
 
 export function ReportModule() {
-  const { outlets, transactions, templates } = useDashboardStore()
+  const { outlets, transactions, templates } = useDashboardStore(useShallow(state => ({ outlets: state.outlets, transactions: state.transactions, templates: state.templates })))
   const [dateRange, setDateRange] = useState('week')
   const [selectedOutlet, setSelectedOutlet] = useState('all')
 
@@ -147,9 +149,7 @@ export function ReportModule() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <div className="flex items-center justify-between mb-4">
@@ -163,12 +163,9 @@ export function ReportModule() {
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{formatPrice(totalRevenue)}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <div className="flex items-center justify-between mb-4">
@@ -182,12 +179,9 @@ export function ReportModule() {
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{totalPhotos}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Sessions</p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <div className="flex items-center justify-between mb-4">
@@ -201,12 +195,9 @@ export function ReportModule() {
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{activeOutlets}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Active Outlets</p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+        <div
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <div className="flex items-center justify-between mb-4">
@@ -220,14 +211,11 @@ export function ReportModule() {
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{templates.length}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Active Templates</p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Weekly Revenue Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+      <div
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
         <h2 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Weekly Revenue</h2>
@@ -250,7 +238,7 @@ export function ReportModule() {
                     </span>
                   )}
                   <div
-                    className="w-full bg-purple-500 rounded-t-lg transition-all duration-500 hover:bg-purple-600 cursor-pointer"
+                    className="w-full bg-purple-500 rounded-t-lg transition-colors duration-150 hover:bg-purple-600 cursor-pointer"
                     style={{
                       height: `${Math.max((data.revenue / maxRevenue) * 180, data.revenue > 0 ? 4 : 0)}px`
                     }}
@@ -262,13 +250,10 @@ export function ReportModule() {
             ))}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Recent Transactions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+      <div
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Transactions</h2>
@@ -329,7 +314,7 @@ export function ReportModule() {
             </table>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   )
 }
