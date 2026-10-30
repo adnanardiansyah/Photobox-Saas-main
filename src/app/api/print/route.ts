@@ -1,94 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// ESC/POS Commands
-const ESC = 0x1b
-const GS = 0x1d
-const LF = 0x0a
-
-const commands = {
-  init: [ESC, 0x40, 0x00], // Initialize printer
-  cut: [GS, 0x56, 0x00],  // Full cut
-  partialCut: [GS, 0x56, 0x01], // Partial cut
-  lineFeed: [LF],
-}
-
-// Printer connection settings (configure these in environment variables)
-const PRINTER_HOST = process.env.PRINTER_HOST || '192.168.1.100'
-const PRINTER_PORT = parseInt(process.env.PRINTER_PORT || '9100')
-
-interface PrintRequest {
-  imageBase64: string
-  copies?: number
-}
+import net from 'net'
+import sharp from 'sharp'
+import { prisma } from '@/lib/db/prisma'
+import { requireBooth, apiError, ApiError } from '@/lib/api-security'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: PrintRequest = await request.json()
-    const { imageBase64, copies = 1 } = body
-
-    if (!imageBase64) {
-      return NextResponse.json(
-        { success: false, error: 'Image data is required' },
-        { status: 400 }
-      )
+    const outlet = await requireBooth(request, 'print')
+    if (!outlet.config?.printEnabled) throw new ApiError(403, 'Cetak tidak aktif untuk outlet ini')
+    const host = process.env.PRINTER_HOST
+    const port = Number(process.env.PRINTER_PORT || 9100)
+    if (!host || process.env.PRINTER_PROTOCOL !== 'escpos') throw new ApiError(503, 'Printer belum dikonfigurasi. Diperlukan printer jaringan ESC/POS.')
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ApiError(503, 'Port printer tidak valid')
+    const { sessionId, imageBase64, copies = 1 } = await request.json()
+    if (typeof sessionId !== 'string' || !sessionId || copies !== 1 || typeof imageBase64 !== 'string' || imageBase64.length > 14000000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imageBase64)) throw new ApiError(400, 'Data cetak tidak valid; satu cetakan per sesi')
+    const session = await prisma.sessionPhoto.findFirst({ where: { id: sessionId, outletId: outlet.id, paymentStatus: 'PAID' } })
+    if (!session) throw new ApiError(404, 'Sesi berbayar tidak ditemukan')
+    const width = Number(process.env.PRINTER_WIDTH_DOTS || 576)
+    if (!Number.isInteger(width) || width < 8 || width > 2048 || width % 8 !== 0) throw new ApiError(503, 'Lebar printer tidak valid')
+    const { data, info } = await sharp(Buffer.from(imageBase64.split(',')[1], 'base64'), { limitInputPixels: 40000000 }).resize({ width }).flatten({ background: '#fff' }).greyscale().raw().toBuffer({ resolveWithObject: true })
+    if (info.height > 10000) throw new ApiError(400, 'Gambar terlalu tinggi untuk printer')
+    const bytesPerRow = width / 8
+    const parts: Buffer[] = [Buffer.from([0x1b, 0x40])]
+    for (let top = 0; top < info.height; top += 256) {
+      const height = Math.min(256, info.height - top)
+      const bitmap = Buffer.alloc(bytesPerRow * height)
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (data[(top + y) * width + x] < 128) bitmap[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x % 8)
+      parts.push(Buffer.from([0x1d, 0x76, 0x30, 0, bytesPerRow & 255, bytesPerRow >> 8, height & 255, height >> 8]), bitmap)
     }
-
-    // For demo purposes, we'll simulate printing
-    // In production, connect to actual thermal printer via network or USB
-    
-    // Convert base64 to buffer
-    const imageBuffer = Buffer.from(imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64')
-    
-    // Try to send to network printer
+    parts.push(Buffer.from([0x0a, 0x0a, 0x0a, 0x1d, 0x56, 0]))
+    const claimed = await prisma.sessionPhoto.updateMany({ where: { id: session.id, status: 'CAPTURING', paymentStatus: 'PAID' }, data: { status: 'PROCESSING' } })
+    if (claimed.count !== 1) throw new ApiError(409, 'Pekerjaan cetak sudah dikirim atau sesi telah selesai')
     try {
-      const response = await sendToNetworkPrinter(imageBuffer, copies)
-      
-      if (response.success) {
-        return NextResponse.json({ 
-          success: true, 
-          message: `Printed ${copies} copy(s)` 
-        })
-      }
-    } catch (printError) {
-      console.log('Network printer not available, simulating print:', printError)
+      await new Promise<void>((resolve, reject) => {
+        const socket = net.createConnection({ host, port })
+        socket.setTimeout(15000)
+        socket.once('error', reject)
+        socket.once('timeout', () => socket.destroy(new Error('Printer timeout')))
+        socket.once('connect', () => socket.end(Buffer.concat(parts)))
+        socket.once('close', hadError => { if (!hadError) resolve() })
+      })
+    } catch {
+      // Do not retry automatically: a connection failure may occur after bytes reached the printer.
+      throw new ApiError(502, 'Koneksi printer gagal. Periksa printer sebelum mencetak ulang; foto masih dapat disimpan.')
     }
-
-    // Return success (simulated print for demo)
-    // In real implementation, you would connect to the thermal printer
-    return NextResponse.json({ 
-      success: true, 
-      message: `Print job sent (simulated) - ${copies} copy(s)`,
-      printerHost: PRINTER_HOST,
-      printerPort: PRINTER_PORT
-    })
-
-  } catch (error) {
-    console.error('Print error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to print' },
-      { status: 500 }
-    )
-  }
+    return NextResponse.json({ success: true, message: 'Data cetak telah dikirim ke printer' })
+  } catch (error) { return apiError(error) }
 }
-
-async function sendToNetworkPrinter(imageData: Buffer, copies: number): Promise<{ success: boolean }> {
-  // This would connect to a network thermal printer
-  // Using raw TCP connection
-  
-  // For actual implementation, you would use a library like 'tcp-port-used' or 'net' module
-  // or a library like 'escpos' with network adapter
-  
-  // Placeholder for actual network printer communication
-  // In production, integrate with actual printer SDK
-  
-  return { success: true }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    status: 'OK',
-    printerHost: PRINTER_HOST,
-    printerPort: PRINTER_PORT,
-    message: 'Print API is running. Send POST request with imageBase64 to print.'
-  })
+export async function GET(request: NextRequest) {
+  try {
+    await requireBooth(request, 'print')
+    return NextResponse.json({ configured: !!process.env.PRINTER_HOST && process.env.PRINTER_PROTOCOL === 'escpos' })
+  } catch (error) { return apiError(error) }
 }
