@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface ModalProps {
   open: boolean
@@ -24,7 +23,15 @@ const sizeClass = {
  * Reusable modern dialog (Shadcn-style).
  * Semua form modal di admin memakai komponen ini supaya tampilan konsisten.
  */
-export function Modal({ open, onClose, title, description, icon: Icon, size = 'md', children }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  icon: Icon,
+  size = 'md',
+  children,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -35,26 +42,18 @@ export function Modal({ open, onClose, title, description, icon: Icon, size = 'm
   }, [open, onClose])
 
   return (
-    <AnimatePresence>
+    <>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ margin: 0 }}>
           {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
+          <div className="absolute inset-0 admin-modal-backdrop bg-black/60" onClick={onClose} />
 
           {/* Panel */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            className={`relative w-full ${sizeClass[size]} flex flex-col max-h-[85vh]
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            className={`admin-modal-panel relative w-full ${sizeClass[size]} flex flex-col max-h-[85vh]
                        bg-white dark:bg-gray-900 rounded-2xl
                        border border-gray-200/60 dark:border-gray-800
                        shadow-2xl shadow-gray-900/20 overflow-hidden`}
@@ -68,7 +67,9 @@ export function Modal({ open, onClose, title, description, icon: Icon, size = 'm
                   </div>
                 )}
                 <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-white leading-tight">{title}</h2>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white leading-tight">
+                    {title}
+                  </h2>
                   {description && (
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
                   )}
@@ -91,10 +92,10 @@ export function Modal({ open, onClose, title, description, icon: Icon, size = 'm
                 body scrollable -> "flex-1 overflow-y-auto px-6 py-5",
                 footer -> <ModalFooter /> */}
             {children}
-          </motion.div>
+          </div>
         </div>
       )}
-    </AnimatePresence>
+    </>
   )
 }
 
