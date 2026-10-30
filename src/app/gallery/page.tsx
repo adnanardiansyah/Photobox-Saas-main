@@ -96,10 +96,14 @@ function GalleryContent() {
           <p className="text-gray-600 mb-6">
             Enter your gallery code to view your photos
           </p>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={event => {
+            event.preventDefault()
+            const value = String(new FormData(event.currentTarget).get('code') || '').trim().toUpperCase()
+            if (value) window.location.href = `/gallery?code=${encodeURIComponent(value)}`
+          }}>
             <input
               type="text"
-              placeholder="Enter code (e.g., ABC123)"
+              name="code" required maxLength={64} placeholder="Masukkan kode galeri"
               className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xl font-mono uppercase"
             />
             <button
