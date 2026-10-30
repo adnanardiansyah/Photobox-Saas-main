@@ -1,16 +1,18 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
+
 import { useState, useEffect } from 'react'
-import { 
-  MapPin, 
-  Search, 
-  Edit, 
+import {
+  MapPin,
+  Search,
+  Edit,
   Plus,
   ExternalLink
 } from 'lucide-react'
 import { useDashboardStore, Outlet } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input } from './ui/Field'
 
@@ -142,7 +144,7 @@ function LocationForm({ open, outlet, onClose, onSubmit }: LocationFormProps) {
 // ============================================
 
 export function LocationModule() {
-  const { outlets, updateOutlet, searchQuery } = useDashboardStore()
+  const { outlets, updateOutlet, searchQuery } = useDashboardStore(useShallow(state => ({ outlets: state.outlets, updateOutlet: state.updateOutlet, searchQuery: state.searchQuery })))
   const [showForm, setShowForm] = useState(false)
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null)
 
@@ -198,10 +200,8 @@ export function LocationModule() {
       {/* Locations Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredOutlets.map((outlet) => (
-          <motion.div
+          <div
             key={outlet.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm border dark:border-gray-800"
           >
             <div className="flex items-start justify-between mb-3">
@@ -243,7 +243,7 @@ export function LocationModule() {
                 <span className="text-gray-900 dark:text-white">Edit</span>
               </button>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
