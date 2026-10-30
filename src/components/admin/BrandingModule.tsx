@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { adminRequest } from '@/lib/admin-client'
 import { useAdminForm } from './ui/useAdminForm'
@@ -98,6 +99,9 @@ export function BrandingModule() {
             disabled={!canManage || saving}
             onBusyChange={setUploading}
           />
+          <p className="text-xs text-gray-500">
+            Tanpa logo unggahan, aplikasi memakai logo SnapNext bawaan.
+          </p>
         </div>
         <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 lg:col-span-2 dark:border-gray-800 dark:bg-gray-900">
           <h2 className="font-semibold">Gambar utama halaman publik</h2>
@@ -115,16 +119,16 @@ export function BrandingModule() {
           className="px-5 py-3 text-sm font-medium text-white"
           style={{ backgroundColor: formData.primaryColor }}
         >
-          Pratinjau ? {formData.companyName}
+          Pratinjau - {formData.companyName}
         </h2>
         <div className="bg-white p-6 text-center dark:bg-gray-900">
-          {formData.logoUrl && (
-            <img
-              src={formData.logoUrl}
-              alt="Pratinjau logo usaha"
-              className="mx-auto mb-4 h-16 max-w-full object-contain"
+          <div className="mb-4 flex justify-center">
+            <BrandLogo
+              logoUrl={formData.logoUrl}
+              companyName={formData.companyName}
+              className="h-16 w-auto max-w-full"
             />
-          )}
+          </div>
           <p className="text-xl font-semibold">{formData.companyName}</p>
           <p className="mt-1 text-sm text-gray-500">{formData.tagline}</p>
           {formData.heroBannerUrl && (
