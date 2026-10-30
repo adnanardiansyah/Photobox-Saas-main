@@ -226,55 +226,55 @@ export function Sidebar() {
 
   const groups: NavGroup[] = [
     {
-      label: 'Main',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+      label: 'Utama',
+      items: [{ id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard }],
     },
     {
-      label: 'Operations',
+      label: 'Operasional',
       items: [
-        { id: 'galleries', label: 'Gallery', icon: Images },
+        { id: 'galleries', label: 'Galeri', icon: Images },
         {
           id: 'outlets',
-          label: 'Outlets',
+          label: 'Outlet',
           icon: Store,
           badge: { text: `${onlineOutlets} online`, tone: onlineOutlets > 0 ? 'emerald' : 'gray' },
         },
         {
           id: 'templates',
-          label: 'Templates',
+          label: 'Template',
           icon: ImageIcon,
           badge: { text: `${templates.length}`, tone: 'gray' },
         },
       ],
     },
     {
-      label: 'Growth',
+      label: 'Pemasaran',
       items: [
         {
           id: 'vouchers',
-          label: 'Vouchers',
+          label: 'Voucher',
           icon: TicketPercent,
           badge: { text: `${activeVouchers}`, tone: 'amber' },
         },
         {
           id: 'testimonials',
-          label: 'Testimonials',
+          label: 'Testimoni',
           icon: MessageSquareHeart,
           badge:
             pendingTestimonials > 0 ? { text: `${pendingTestimonials}`, tone: 'pink' } : undefined,
         },
-        { id: 'locations', label: 'Locations', icon: MapPin },
+        { id: 'locations', label: 'Lokasi', icon: MapPin },
       ],
     },
     {
-      label: 'Insights',
-      items: [{ id: 'reports', label: 'Reports', icon: BarChart3 }],
+      label: 'Analisis',
+      items: [{ id: 'reports', label: 'Laporan', icon: BarChart3 }],
     },
     {
-      label: 'Administration',
+      label: 'Administrasi',
       items: [
-        { id: 'users', label: 'Team', icon: Users, badge: { text: `${activeUsers}`, tone: 'sky' } },
-        { id: 'settings', label: 'Settings', icon: Settings2 },
+        { id: 'users', label: 'Tim', icon: Users, badge: { text: `${activeUsers}`, tone: 'sky' } },
+        { id: 'settings', label: 'Identitas usaha', icon: Settings2 },
       ],
     },
   ]
@@ -326,7 +326,7 @@ export function Sidebar() {
                 </p>
                 <p className="flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
                   <Activity className="w-2.5 h-2.5 text-emerald-500" />
-                  Admin Console
+                  Panel pengelolaan
                 </p>
               </div>
             )}
@@ -404,7 +404,9 @@ export function Sidebar() {
               {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
             </span>
             {!sidebarCollapsed && (
-              <span className="text-sm font-medium whitespace-nowrap">Light Mode</span>
+              <span className="text-sm font-medium whitespace-nowrap">
+                {darkMode ? 'Mode terang' : 'Mode gelap'}
+              </span>
             )}
           </button>
 
@@ -412,20 +414,22 @@ export function Sidebar() {
           <button
             onClick={async () => {
               try {
-                await fetch('/api/admin/logout', { method: 'POST' })
+                const response = await fetch('/api/admin/logout', { method: 'POST' })
+                if (!response.ok) throw new Error('Logout gagal')
+                useDashboardStore.getState().clearAdminSession()
                 router.push('/admin/login')
               } catch (error) {
                 console.error('[Logout] error:', error)
               }
             }}
-            title={sidebarCollapsed ? 'Logout' : undefined}
+            title={sidebarCollapsed ? 'Keluar' : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-400
                        hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400
                        transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}
           >
             <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
             {!sidebarCollapsed && (
-              <span className="text-sm font-medium whitespace-nowrap">Logout</span>
+              <span className="text-sm font-medium whitespace-nowrap">Keluar</span>
             )}
           </button>
         </div>
