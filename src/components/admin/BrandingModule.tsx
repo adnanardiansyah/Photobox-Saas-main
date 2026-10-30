@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { 
   Palette, 
   Image as ImageIcon, 
@@ -36,7 +36,7 @@ export function BrandingModule() {
     try {
       const formDataUpload = new FormData()
       formDataUpload.append('photo', file, file.name)
-      formDataUpload.append('galleryCode', folder)
+      formDataUpload.append('assetFolder', folder)
 
       const response = await fetch('/api/photos/upload', {
         method: 'POST',
@@ -104,9 +104,15 @@ export function BrandingModule() {
     }
   }
 
-  const handleSave = () => {
-    updateBranding(formData)
-    toast.success('Branding settings saved!')
+  useEffect(() => { setFormData(branding) }, [branding])
+  const handleSave = async () => {
+    try {
+      const response = await fetch('/api/admin/branding', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Gagal menyimpan branding')
+      await useDashboardStore.getState().refreshDashboard()
+      toast.success('Branding tersimpan')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal menyimpan branding') }
   }
 
   const handleColorChange = (field: 'primaryColor' | 'secondaryColor', value: string) => {
@@ -154,10 +160,10 @@ export function BrandingModule() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Tagline</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Tagline (default)</label>
               <input
                 type="text"
-                value={formData.tagline}
+                disabled value={formData.tagline}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
@@ -197,17 +203,17 @@ export function BrandingModule() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Secondary Color</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Secondary Color (default)</label>
               <div className="flex gap-2">
                 <input
                   type="color"
-                  value={formData.secondaryColor}
+                  disabled value={formData.secondaryColor}
                   onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
                   className="w-12 h-10 rounded-lg border dark:border-gray-700 cursor-pointer"
                 />
                 <input
                   type="text"
-                  value={formData.secondaryColor}
+                  disabled value={formData.secondaryColor}
                   onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
                   className="flex-1 px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
