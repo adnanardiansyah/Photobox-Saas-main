@@ -3,59 +3,17 @@
 // Generates unique gallery codes for new photo sessions
 // ============================================
 
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/db/prisma'
 
 /**
  * Generate a unique gallery code
- * Format: 3 letters + 3 numbers (e.g., ABC123, XYZ789)
+ * 128-bit random bearer code for public gallery access.
  */
 export async function generateUniqueGalleryCode(): Promise<string> {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  const numbers = '0123456789'
+  // Database uniqueness remains the final authority; creation retries a collision.
+  return randomBytes(16).toString('hex').toUpperCase()
 
-  let attempts = 0
-  const maxAttempts = 100
-
-  while (attempts < maxAttempts) {
-    // Generate 3 random letters
-    const letters = Array.from({ length: 3 }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join('')
-
-    // Generate 3 random numbers
-    const nums = Array.from({ length: 3 }, () =>
-      numbers[Math.floor(Math.random() * numbers.length)]
-    ).join('')
-
-    const code = letters + nums
-
-    // Check if code already exists
-    const existing = await prisma.sessionPhoto.findUnique({
-      where: { galleryCode: code },
-    })
-
-    if (!existing) {
-      return code
-    }
-
-    attempts++
-  }
-
-  // Fallback: use timestamp-based code if random generation fails
-  const timestamp = Date.now().toString().slice(-6)
-  const fallbackCode = 'GAL' + timestamp
-
-  // Double-check fallback code doesn't exist
-  const existingFallback = await prisma.sessionPhoto.findUnique({
-    where: { galleryCode: fallbackCode },
-  })
-
-  if (!existingFallback) {
-    return fallbackCode
-  }
-
-  // Ultimate fallback: add random suffix
-  return fallbackCode + Math.floor(Math.random() * 100)
 }
 
 /**
@@ -71,23 +29,19 @@ export async function isGalleryCodeAvailable(code: string): Promise<boolean> {
 /**
  * Create a new photo session with unique gallery code
  */
-export async function createNewPhotoSession(outletId: string, frameId?: string) {
-  const galleryCode = await generateUniqueGalleryCode()
-
-  const session = await prisma.sessionPhoto.create({
-    data: {
-      outletId,
-      frameId,
-      sessionCode: `SESSION-${galleryCode}-001`,
-      status: 'CAPTURING',
-      photos: [],          // ✅ fix: Json type, tidak perlu JSON.stringify
-      totalPrice: 0,
-      paymentMethod: null,
-      paymentStatus: 'PENDING',
-      galleryCode,
-      galleryExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-    },
-  })
-
-  return session
+export async function createNewPhotoSession(outletId: string, frameId?: string, totalPrice = 0) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const galleryCode = await generateUniqueGalleryCode()
+    try {
+      return await prisma.sessionPhoto.create({ data: {
+        outletId, frameId, sessionCode: `SESSION-${galleryCode}`,
+        status: 'CAPTURING', photos: [], totalPrice,
+        paymentStatus: 'PENDING', galleryCode,
+        galleryExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      } })
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'P2002' || attempt === 2) throw error
+    }
+  }
+  throw new Error('Could not allocate session')
 }
