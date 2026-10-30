@@ -396,16 +396,17 @@ export function Sidebar() {
           {/* Dark mode */}
           <button
             onClick={toggleDarkMode}
-            title={sidebarCollapsed ? 'Toggle theme' : undefined}
+            title={darkMode ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+            aria-label={darkMode ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-400
                        hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}
           >
-            <span key={darkMode ? 'sun' : 'moon'}>
-              {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+            <span key={darkMode ? 'moon' : 'sun'}>
+              {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
             </span>
             {!sidebarCollapsed && (
               <span className="text-sm font-medium whitespace-nowrap">
-                {darkMode ? 'Mode terang' : 'Mode gelap'}
+                {darkMode ? 'Mode gelap' : 'Mode terang'}
               </span>
             )}
           </button>
