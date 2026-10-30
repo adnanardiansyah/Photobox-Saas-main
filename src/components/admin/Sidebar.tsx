@@ -18,11 +18,10 @@ import {
   LogOut,
   Moon,
   Sun,
-  Sparkles,
   ChevronsLeft,
   ChevronsRight,
-  Activity,
 } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { useRouter } from 'next/navigation'
 
@@ -306,30 +305,12 @@ export function Sidebar() {
           <div
             className={`flex items-center gap-2.5 min-w-0 ${sidebarCollapsed ? 'mx-auto' : 'flex-1'}`}
           >
-            {/* Brand mark */}
-            <div
-              className="relative w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
-                boxShadow: `0 4px 14px color-mix(in srgb, ${branding.primaryColor} 40%, transparent)`,
-              }}
-            >
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-
-            {/* Brand text */}
-
-            {!sidebarCollapsed && (
-              <div key="brand-text" className="min-w-0 overflow-hidden whitespace-nowrap">
-                <p className="text-sm font-bold leading-tight bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-                  {branding.companyName || 'SnapNext'}
-                </p>
-                <p className="flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                  <Activity className="w-2.5 h-2.5 text-emerald-500" />
-                  Panel pengelolaan
-                </p>
-              </div>
-            )}
+            <BrandLogo
+              logoUrl={branding.logoUrl}
+              companyName={branding.companyName}
+              compact={sidebarCollapsed}
+              className={sidebarCollapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-[10rem]'}
+            />
           </div>
 
           {/* Close (mobile) — shown only when expanded */}
