@@ -282,7 +282,7 @@ function AddGalleryModal({ open, onClose, onSuccess }: { open: boolean; onClose:
               type="text"
               value={galleryCode}
               onChange={(e) => setGalleryCode(e.target.value.toUpperCase())}
-              placeholder="e.g. MHN2"
+              placeholder="Minimal 6 karakter, atau kosongkan agar otomatis"
             />
           </Field>
 
