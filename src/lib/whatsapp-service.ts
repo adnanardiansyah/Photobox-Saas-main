@@ -22,7 +22,7 @@ const WANOTIF_API_URL = 'https://wanotif.com/api/send-message'
 // Get config from environment
 const FONNTE_TOKEN = process.env.FONNTE_API_TOKEN || ''
 const WABLAS_TOKEN = process.env.WABLAS_API_TOKEN || ''
-const WANOTIF_TOKEN = process.env.WANOTIF_API_TOKEN || 'eJq5ydqkSzHDYydRdE8X'
+const WANOTIF_TOKEN = process.env.WANOTIF_API_TOKEN || ''
 const DEFAULT_SENDER = process.env.WHATSAPP_SENDER_NUMBER || ''
 
 // ============================================
@@ -194,7 +194,7 @@ export async function sendWhatsApp(message: WhatsAppMessage): Promise<WhatsAppRe
   }
 
   // Demo mode - log but don't actually send
-  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+  if (process.env.NODE_ENV !== 'production' && process.env.DEMO_MODE === 'true') {
     console.log('[DEMO] WhatsApp message would be sent:', message)
     return {
       success: true,
