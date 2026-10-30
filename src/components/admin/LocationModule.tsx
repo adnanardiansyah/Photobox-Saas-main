@@ -151,11 +151,22 @@ export function LocationModule() {
     outlet.location.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleUpdate = (data: Partial<Outlet>) => {
-    if (editingOutlet) {
-      updateOutlet(editingOutlet.id, data)
-      toast.success('Location updated successfully!')
-    }
+  const handleUpdate = async (data: Partial<Outlet>) => {
+    if (!editingOutlet) return
+    try {
+      const url = new URL(data.mapsUrl || '')
+      if (!['maps.google.com', 'www.google.com', 'google.com'].includes(url.hostname)) throw new Error('Gunakan URL Google Maps dengan koordinat')
+      const query = url.searchParams.get('q')?.split(',')
+      const lon = data.mapsUrl?.match(/!2d(-?[0-9.]+)/)?.[1]
+      const lat = data.mapsUrl?.match(/!3d(-?[0-9.]+)/)?.[1]
+      const latitude = Number(lat || query?.[0]); const longitude = Number(lon || query?.[1])
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error('Koordinat tidak ditemukan. Atur latitude dan longitude di menu Outlets.')
+      const response = await fetch(`/api/admin/outlets?id=${encodeURIComponent(editingOutlet.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: data.name, address: data.location, latitude, longitude }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Gagal menyimpan lokasi')
+      await useDashboardStore.getState().refreshDashboard()
+      toast.success('Lokasi tersimpan')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Gagal menyimpan lokasi') }
   }
 
   const openMaps = (url: string) => {
