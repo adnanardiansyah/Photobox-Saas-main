@@ -480,8 +480,13 @@ interface QrisDisplayProps {
 export function QrisDisplay({ qrString, amount, onComplete, onCancel }: QrisDisplayProps) {
   const { qrisExpiry, qrisPolling, setQrisPolling } = usePaymentStore()
 
-  // Simulate QR display (in production use a proper QR generator)
-  const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrString)}`
+  // Generate the QR locally; payment data does not leave the application.
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    import('qrcode').then(QRCode => QRCode.toDataURL(qrString, { width: 300 })).then(url => { if (!cancelled) setQrDataUrl(url) }).catch(() => { if (!cancelled) setQrDataUrl('') })
+    return () => { cancelled = true }
+  }, [qrString])
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 overflow-hidden">
@@ -1292,8 +1297,8 @@ export function CompletedScreen({ galleryCode, customerPhone, onDone }: Complete
     {
       icon: Check,
       color: 'bg-green-500',
-      title: 'Foto Berhasil Dicetak!',
-      desc: 'Foto kamu sudah dicetak dan siap diambil.',
+      title: 'Foto Berhasil Disimpan!',
+      desc: 'Foto kamu sudah tersimpan di galeri digital.',
     },
     {
       icon: Download,
@@ -1368,7 +1373,7 @@ export function CompletedScreen({ galleryCode, customerPhone, onDone }: Complete
           className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 mb-6 text-center shadow-xl"
         >
           <p className="text-purple-100 text-sm mb-2 font-medium">KODE GALERI KAMU</p>
-          <p className="text-5xl font-bold text-white font-mono tracking-widest">{galleryCode}</p>
+          <p className="text-2xl sm:text-3xl break-all font-bold text-white font-mono tracking-wide">{galleryCode}</p>
           <div className="mt-3 flex items-center justify-center gap-2 text-purple-100 text-sm">
             <Clock className="w-4 h-4" />
             <span>Berlaku 7 hari sejak cetak</span>
