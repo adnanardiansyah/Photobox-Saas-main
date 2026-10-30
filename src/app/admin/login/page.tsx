@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import {
-  Camera,
   Mail,
   Lock,
   Eye,
@@ -15,22 +14,38 @@ import {
   Sparkles,
   Shield,
   Home,
-  Image
+  Image,
 } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-function Orb({ x, y, size, duration, delay, color, blur }: {
-  x: number; y: number; size: number
-  duration: number; delay: number; color: string; blur: number
+function Orb({
+  x,
+  y,
+  size,
+  duration,
+  delay,
+  color,
+  blur,
+}: {
+  x: number
+  y: number
+  size: number
+  duration: number
+  delay: number
+  color: string
+  blur: number
 }) {
   return (
     <motion.div
       className="absolute rounded-full pointer-events-none"
       style={{
-        left: `${x}%`, top: `${y}%`,
-        width: size, height: size,
+        left: `${x}%`,
+        top: `${y}%`,
+        width: size,
+        height: size,
         background: `radial-gradient(circle at 40% 40%, ${color}, transparent 70%)`,
         filter: `blur(${blur}px)`,
         opacity: 0.55,
@@ -46,9 +61,20 @@ function Orb({ x, y, size, duration, delay, color, blur }: {
   )
 }
 
-function Particle({ x, y, size, duration, delay, color }: {
-  x: number; y: number; size: number
-  duration: number; delay: number; color: string
+function Particle({
+  x,
+  y,
+  size,
+  duration,
+  delay,
+  color,
+}: {
+  x: number
+  y: number
+  size: number
+  duration: number
+  delay: number
+  color: string
 }) {
   return (
     <motion.div
@@ -67,7 +93,10 @@ function CursorSpotlight({ primaryColor }: { primaryColor: string }) {
   const springY = useSpring(mouseY, { stiffness: 80, damping: 20 })
 
   useEffect(() => {
-    const move = (e: MouseEvent) => { mouseX.set(e.clientX); mouseY.set(e.clientY) }
+    const move = (e: MouseEvent) => {
+      mouseX.set(e.clientX)
+      mouseY.set(e.clientY)
+    }
     window.addEventListener('mousemove', move)
     return () => window.removeEventListener('mousemove', move)
   }, [mouseX, mouseY])
@@ -88,7 +117,15 @@ function CursorSpotlight({ primaryColor }: { primaryColor: string }) {
   )
 }
 
-function FloatingFrame({ index, primaryColor, secondaryColor }: { index: number; primaryColor: string; secondaryColor: string }) {
+function FloatingFrame({
+  index,
+  primaryColor,
+  secondaryColor,
+}: {
+  index: number
+  primaryColor: string
+  secondaryColor: string
+}) {
   const xPositions = [8, 92, 85, 15]
   const yPositions = [15, 20, 75, 80]
   const rotations = [-8, 6, -5, 10]
@@ -134,8 +171,16 @@ function FloatingFrame({ index, primaryColor, secondaryColor }: { index: number;
 }
 
 function InputField({
-  label, type, value, onChange, placeholder, icon: Icon,
-  rightElement, disabled, primaryColor, index
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  icon: Icon,
+  rightElement,
+  disabled,
+  primaryColor,
+  index,
 }: {
   label: string
   type: string
@@ -205,9 +250,7 @@ function InputField({
         />
 
         {rightElement && (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">
-            {rightElement}
-          </div>
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">{rightElement}</div>
         )}
       </div>
     </motion.div>
@@ -226,7 +269,9 @@ export default function AdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -272,27 +317,26 @@ export default function AdminLoginPage() {
   }
 
   const orbs = [
-    { x: -8,  y: -5,  size: 420, duration: 12, delay: 0,   color: branding.primaryColor,   blur: 60 },
-    { x: 75,  y: 55,  size: 380, duration: 15, delay: 2,   color: branding.secondaryColor, blur: 70 },
-    { x: 35,  y: 75,  size: 320, duration: 11, delay: 4,   color: branding.primaryColor,   blur: 80 },
-    { x: 82,  y: -8,  size: 280, duration: 17, delay: 1,   color: branding.secondaryColor, blur: 55 },
-    { x: 50,  y: 40,  size: 240, duration: 13, delay: 3.5, color: '#a855f7',               blur: 90 },
+    { x: -8, y: -5, size: 420, duration: 12, delay: 0, color: branding.primaryColor, blur: 60 },
+    { x: 75, y: 55, size: 380, duration: 15, delay: 2, color: branding.secondaryColor, blur: 70 },
+    { x: 35, y: 75, size: 320, duration: 11, delay: 4, color: branding.primaryColor, blur: 80 },
+    { x: 82, y: -8, size: 280, duration: 17, delay: 1, color: branding.secondaryColor, blur: 55 },
+    { x: 50, y: 40, size: 240, duration: 13, delay: 3.5, color: '#a855f7', blur: 90 },
   ]
 
   const particles = [
-    { x: 10, y: 25, size: 3, duration: 4,   delay: 0,   color: `${branding.primaryColor}90`   },
-    { x: 22, y: 70, size: 2, duration: 5.5, delay: 1,   color: `${branding.secondaryColor}80` },
-    { x: 78, y: 20, size: 3, duration: 4.8, delay: 0.5, color: `${branding.primaryColor}70`   },
-    { x: 88, y: 65, size: 2, duration: 6,   delay: 1.8, color: `${branding.secondaryColor}90` },
-    { x: 50, y: 10, size: 2, duration: 5,   delay: 2.5, color: `${branding.primaryColor}60`   },
+    { x: 10, y: 25, size: 3, duration: 4, delay: 0, color: `${branding.primaryColor}90` },
+    { x: 22, y: 70, size: 2, duration: 5.5, delay: 1, color: `${branding.secondaryColor}80` },
+    { x: 78, y: 20, size: 3, duration: 4.8, delay: 0.5, color: `${branding.primaryColor}70` },
+    { x: 88, y: 65, size: 2, duration: 6, delay: 1.8, color: `${branding.secondaryColor}90` },
+    { x: 50, y: 10, size: 2, duration: 5, delay: 2.5, color: `${branding.primaryColor}60` },
     { x: 65, y: 85, size: 3, duration: 4.2, delay: 0.8, color: `${branding.secondaryColor}70` },
-    { x: 35, y: 45, size: 2, duration: 7,   delay: 0.3, color: `${branding.primaryColor}50`   },
+    { x: 35, y: 45, size: 2, duration: 7, delay: 0.3, color: `${branding.primaryColor}50` },
     { x: 55, y: 30, size: 2, duration: 3.5, delay: 1.5, color: `${branding.secondaryColor}60` },
   ]
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-
       {/* ── Animated gradient background ──────────────────────────── */}
       <div className="absolute inset-0">
         {/* Base dark tone */}
@@ -350,7 +394,8 @@ export default function AdminLoginPage() {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
           backgroundSize: '100% 4px',
         }}
       />
@@ -362,9 +407,15 @@ export default function AdminLoginPage() {
       {mounted && particles.map((p, i) => <Particle key={i} {...p} />)}
 
       {/* ── Decorative floating frames ────────────────────────────── */}
-      {mounted && [0, 1, 2, 3].map((i) => (
-        <FloatingFrame key={i} index={i} primaryColor={branding.primaryColor} secondaryColor={branding.secondaryColor} />
-      ))}
+      {mounted &&
+        [0, 1, 2, 3].map((i) => (
+          <FloatingFrame
+            key={i}
+            index={i}
+            primaryColor={branding.primaryColor}
+            secondaryColor={branding.secondaryColor}
+          />
+        ))}
 
       {/* ── Cursor spotlight ──────────────────────────────────────── */}
       {mounted && <CursorSpotlight primaryColor={branding.primaryColor} />}
@@ -389,31 +440,12 @@ export default function AdminLoginPage() {
             whileHover={{ scale: 1.04 }}
             transition={{ type: 'spring', stiffness: 280, damping: 18 }}
           >
-            {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt={branding.companyName} className="h-12 w-auto" />
-            ) : (
-              <motion.div
-                whileHover={{ rotate: 10, scale: 1.1 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl"
-                style={{
-                  background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
-                  boxShadow: `0 8px 32px ${branding.primaryColor}50`,
-                }}
-              >
-                <Camera className="w-6 h-6 text-white" />
-              </motion.div>
-            )}
-            <span
-              className="text-2xl font-bold"
-              style={{
-                background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {branding.companyName}
-            </span>
+            <BrandLogo
+              logoUrl={branding.logoUrl}
+              companyName={branding.companyName}
+              tone="dark"
+              className="h-20 w-auto max-w-[19rem]"
+            />
           </motion.a>
 
           <motion.div
@@ -465,7 +497,9 @@ export default function AdminLoginPage() {
         >
           <div
             className="absolute top-0 left-0 right-0 h-px"
-            style={{ background: `linear-gradient(90deg, transparent, ${branding.primaryColor}60, transparent)` }}
+            style={{
+              background: `linear-gradient(90deg, transparent, ${branding.primaryColor}60, transparent)`,
+            }}
           />
 
           <motion.div
@@ -484,7 +518,10 @@ export default function AdminLoginPage() {
                 exit={{ opacity: 0, y: -8, height: 0 }}
                 transition={{ duration: 0.3, ease }}
                 className="mb-5 p-3.5 rounded-2xl flex items-center gap-3"
-                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+                style={{
+                  background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                }}
               >
                 <motion.div
                   animate={{ rotate: [0, -8, 8, -8, 0] }}
@@ -502,7 +539,10 @@ export default function AdminLoginPage() {
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.3, ease }}
                 className="mb-5 p-3.5 rounded-2xl flex items-center gap-3"
-                style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)' }}
+                style={{
+                  background: 'rgba(34,197,94,0.12)',
+                  border: '1px solid rgba(34,197,94,0.25)',
+                }}
               >
                 <CheckCircle2 className="w-[18px] h-[18px] text-green-400 flex-shrink-0" />
                 <p className="text-green-300 text-sm">{success}</p>
@@ -543,15 +583,21 @@ export default function AdminLoginPage() {
                 >
                   <AnimatePresence mode="wait">
                     {showPassword ? (
-                      <motion.span key="off"
-                        initial={{ rotate: -15, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 15, opacity: 0 }}
+                      <motion.span
+                        key="off"
+                        initial={{ rotate: -15, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: 15, opacity: 0 }}
                         transition={{ duration: 0.15 }}
                       >
                         <EyeOff className="w-[18px] h-[18px]" />
                       </motion.span>
                     ) : (
-                      <motion.span key="on"
-                        initial={{ rotate: 15, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -15, opacity: 0 }}
+                      <motion.span
+                        key="on"
+                        initial={{ rotate: 15, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: -15, opacity: 0 }}
                         transition={{ duration: 0.15 }}
                       >
                         <Eye className="w-[18px] h-[18px]" />
@@ -591,7 +637,10 @@ export default function AdminLoginPage() {
                           exit={{ scale: 0, opacity: 0 }}
                           transition={{ duration: 0.15 }}
                           className="w-2.5 h-2.5 text-white"
-                          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </motion.svg>
@@ -634,9 +683,15 @@ export default function AdminLoginPage() {
                   <motion.div
                     className="absolute inset-0 pointer-events-none"
                     animate={{ x: ['-100%', '200%'] }}
-                    transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1.5, ease: 'linear' }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      repeatDelay: 1.5,
+                      ease: 'linear',
+                    }}
                     style={{
-                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%)',
+                      background:
+                        'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%)',
                     }}
                   />
                 )}
