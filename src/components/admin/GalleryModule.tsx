@@ -1,4 +1,5 @@
 'use client'
+import { WriteAccess } from './ui/WriteAccess'
 
 import { useShallow } from 'zustand/react/shallow'
 
@@ -6,6 +7,9 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, Eye, Copy, Check, RefreshCw, Loader2, QrCode, X } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
+import { adminRequest } from '@/lib/admin-client'
+import { useAdminForm } from './ui/useAdminForm'
+import { ImageUpload } from './ui/ImageUpload'
 
 import { Modal, ModalFooter } from './ui/Modal'
 import { Field, Input } from './ui/Field'
@@ -23,7 +27,9 @@ interface GalleryData {
 }
 
 export function GalleryModule() {
-  const { searchQuery } = useDashboardStore(useShallow(state => ({ searchQuery: state.searchQuery })))
+  const { searchQuery } = useDashboardStore(
+    useShallow((state) => ({ searchQuery: state.searchQuery }))
+  )
   const [galleries, setGalleries] = useState<GalleryData[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -35,15 +41,17 @@ export function GalleryModule() {
       const res = await fetch('/api/admin/gallery')
       const data = await res.json()
       if (data.success) setGalleries(data.data)
-      else toast.error('Failed to fetch galleries')
+      else toast.error('Galeri belum dapat dimuat. Coba muat ulang menu.')
     } catch {
-      toast.error('Failed to fetch galleries')
+      toast.error('Galeri belum dapat dimuat. Coba muat ulang menu.')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchGalleries() }, [])
+  useEffect(() => {
+    fetchGalleries()
+  }, [])
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code)
@@ -56,9 +64,10 @@ export function GalleryModule() {
     window.open(`/gallery?code=${code}`, '_blank')
   }
 
-  const filteredGalleries = galleries.filter(gallery =>
-    gallery.galleryCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    gallery.outlet.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredGalleries = galleries.filter(
+    (gallery) =>
+      gallery.galleryCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      gallery.outlet.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
@@ -73,8 +82,10 @@ export function GalleryModule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gallery Management</h2>
-          <p className="text-gray-500 dark:text-gray-400">Manage photo galleries and codes</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Kelola galeri</h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            Lihat foto, salin kode, dan kelola galeri pelanggan.
+          </p>
         </div>
         <div className="flex gap-3">
           <button
@@ -82,15 +93,17 @@ export function GalleryModule() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            Muat ulang
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            <Plus className="w-4 h-4" />
-            Add Gallery
-          </button>
+          <WriteAccess>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              <Plus className="w-4 h-4" />
+              Tambah galeri
+            </button>
+          </WriteAccess>
         </div>
       </div>
 
@@ -98,7 +111,7 @@ export function GalleryModule() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
         <input
           type="text"
-          placeholder="Search galleries..."
+          placeholder="Cari kode galeri atau outlet..."
           value={searchQuery}
           onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -115,13 +128,17 @@ export function GalleryModule() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <QrCode className="w-5 h-5 text-purple-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{gallery.galleryCode}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {gallery.galleryCode}
+                  </h3>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  gallery.status === 'COMPLETED'
-                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
-                }`}>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    gallery.status === 'COMPLETED'
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  }`}
+                >
                   {gallery.status}
                 </span>
               </div>
@@ -132,12 +149,17 @@ export function GalleryModule() {
 
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {gallery.photos.slice(0, 4).map((photo, idx) => (
-                  <div key={idx} className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                  <div
+                    key={idx}
+                    className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+                  >
                     <img
                       src={photo}
                       alt={`Photo ${idx + 1}`}
                       className="w-full h-full object-cover"
-                      onError={(e) => { e.currentTarget.src = '/placeholder-image.png' }}
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder-image.png'
+                      }}
                     />
                   </div>
                 ))}
@@ -159,7 +181,7 @@ export function GalleryModule() {
                     <Copy className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   )}
                   <span className="text-gray-700 dark:text-gray-300">
-                    {copiedCode === gallery.galleryCode ? 'Copied!' : 'Copy Code'}
+                    {copiedCode === gallery.galleryCode ? 'Tersalin' : 'Salin kode'}
                   </span>
                 </button>
                 <button
@@ -167,7 +189,7 @@ export function GalleryModule() {
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
                 >
                   <Eye className="w-4 h-4" />
-                  View
+                  Lihat
                 </button>
               </div>
 
@@ -181,12 +203,10 @@ export function GalleryModule() {
       </div>
 
       {filteredGalleries.length === 0 && !loading && (
-        <div
-          className="text-center py-12"
-        >
+        <div className="text-center py-12">
           <QrCode className="w-16 h-16 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
-            {searchQuery ? 'No galleries match your search' : 'No galleries found'}
+            {searchQuery ? 'No galleries match your search' : 'Galeri tidak ditemukan'}
           </p>
         </div>
       )}
@@ -203,143 +223,185 @@ export function GalleryModule() {
   )
 }
 
-function AddGalleryModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
+function AddGalleryModal({
+  open,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean
+  onClose: () => void
+  onSuccess: () => void
+}) {
   const [galleryCode, setGalleryCode] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
   const [photoInput, setPhotoInput] = useState('')
   const [totalPrice, setTotalPrice] = useState(25000)
-  const [saving, setSaving] = useState(false)
-
-  const handleAddPhoto = () => {
-    if (photoInput.trim()) {
-      setPhotos([...photos, photoInput.trim()])
-      setPhotoInput('')
-    }
-  }
-
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(photos.filter((_, i) => i !== index))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (galleryCode.trim() && photos.length === 0) {
-      toast.error('Photos are required when providing gallery code')
-      return
-    }
-
-    setSaving(true)
-    try {
-      const payload: any = { totalPrice }
-      if (galleryCode.trim()) {
-        payload.galleryCode = galleryCode.trim()
-        payload.photos = photos
-      } else {
-        const outletRes = await fetch('/api/admin/outlets')
-        const outletData = await outletRes.json()
-        if (outletData.success && outletData.data.length > 0) {
-          payload.outletId = outletData.data[0].id
-        } else {
-          toast.error('No outlet found')
-          return
+  const [outlets, setOutlets] = useState<{ id: string; name: string }[]>([])
+  const [outletId, setOutletId] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const { saving, error, submit } = useAdminForm(open, onSuccess)
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setGalleryCode('')
+    setPhotos([])
+    setPhotoInput('')
+    setTotalPrice(25000)
+    setLoadError('')
+    setOutletId('')
+    setOutlets([])
+    adminRequest('/api/admin/outlets')
+      .then((result) => {
+        if (!cancelled) {
+          setOutlets(result.data)
+          setOutletId(result.data[0]?.id || '')
         }
-      }
-
-      const res = await fetch('/api/admin/gallery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
       })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(galleryCode.trim() ? 'Gallery added!' : 'Gallery session created!')
-        onSuccess()
-      } else {
-        toast.error(data.error || 'Failed to add gallery')
-      }
-    } catch {
-      toast.error('Failed to add gallery')
-    } finally {
-      setSaving(false)
+      .catch((err) => {
+        if (!cancelled) setLoadError(err.message)
+      })
+    return () => {
+      cancelled = true
     }
-  }
-
+  }, [open])
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Add New Gallery"
-      description="Buat galeri baru atau hubungkan dengan kode galeri."
+      busy={saving || uploading}
+      title="Tambah galeri"
+      description="Unggah foto, pilih outlet, lalu simpan. Kode galeri dibuat otomatis."
       icon={Plus}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label="Gallery Code" hint="Kosongkan untuk auto-generate.">
-            <Input
-              type="text"
-              value={galleryCode}
-              onChange={(e) => setGalleryCode(e.target.value.toUpperCase())}
-              placeholder="Minimal 6 karakter, atau kosongkan agar otomatis"
-            />
-          </Field>
-
-          <Field label="Total Price (Rp)" required>
-            <Input
-              type="number"
-              value={totalPrice}
-              onChange={(e) => setTotalPrice(Number(e.target.value))}
-              min="0"
-            />
-          </Field>
-
-          <Field label="Photos" hint="Tambahkan URL foto satu per satu.">
-            <div className="flex gap-2 mb-2">
-              <Input
-                type="text"
-                value={photoInput}
-                onChange={(e) => setPhotoInput(e.target.value)}
-                placeholder="/photos/photo1.jpg"
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPhoto() } }}
-              />
-              <button
-                type="button"
-                onClick={handleAddPhoto}
-                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium shrink-0"
+      <form
+        className="flex flex-1 flex-col overflow-hidden"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit(async () => {
+            if (uploading) throw new Error('Tunggu unggahan selesai')
+            if (!outletId)
+              throw new Error('Pilih outlet terlebih dahulu. Buat outlet jika daftar masih kosong.')
+            if (!photos.length) throw new Error('Unggah minimal satu foto untuk galeri ini')
+            await adminRequest('/api/admin/gallery', {
+              method: 'POST',
+              body: JSON.stringify({
+                outletId,
+                photos,
+                totalPrice,
+                ...(galleryCode.trim() ? { galleryCode: galleryCode.trim().toUpperCase() } : {}),
+              }),
+            })
+            toast.success('Galeri berhasil disimpan')
+          })
+        }}
+      >
+        {(error || loadError) && (
+          <p
+            role="alert"
+            className="mx-6 mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300"
+          >
+            {error || loadError}
+          </p>
+        )}
+        <fieldset disabled={saving} className="contents">
+          <div className="space-y-4 overflow-y-auto px-6 py-5">
+            <Field label="Outlet" required>
+              <select
+                aria-label="Outlet galeri"
+                value={outletId}
+                onChange={(e) => setOutletId(e.target.value)}
+                required
+                className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-gray-700 dark:bg-gray-900"
               >
-                Add
-              </button>
-            </div>
-            {photos.length > 0 && (
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {photos.map((photo, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{photo}</span>
-                    <button type="button" onClick={() => handleRemovePhoto(index)} className="text-red-500 hover:text-red-700 shrink-0 ml-2 p-1">
-                      <X className="w-4 h-4" />
+                <option value="">Pilih outlet</option>
+                {outlets.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Foto galeri" required>
+              <ImageUpload
+                folder="gallery"
+                multiple
+                value={photos}
+                onChange={setPhotos}
+                disabled={saving}
+                onBusyChange={setUploading}
+              />
+            </Field>
+            <Field
+              label="Pembayaran tunai tercatat (Rp)"
+              hint="Galeri manual ini dicatat sebagai sesi selesai dengan pembayaran tunai yang sudah lunas."
+              required
+            >
+              <Input
+                type="number"
+                value={totalPrice}
+                onChange={(e) => setTotalPrice(Number(e.target.value))}
+                min="0"
+                step="1"
+                required
+              />
+            </Field>
+            <details className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+              <summary className="cursor-pointer text-gray-600 dark:text-gray-300">
+                Pengaturan lanjutan (opsional)
+              </summary>
+              <div className="mt-3 space-y-3">
+                <Field
+                  label="Kode galeri sendiri"
+                  hint="Kosongkan agar otomatis. Minimal 6 huruf besar/angka, boleh tanda hubung."
+                >
+                  <Input
+                    value={galleryCode}
+                    onChange={(e) => setGalleryCode(e.target.value.toUpperCase())}
+                  />
+                </Field>
+                <Field label="Tambahkan tautan foto tersimpan">
+                  <div className="flex gap-2">
+                    <Input
+                      value={photoInput}
+                      onChange={(e) => setPhotoInput(e.target.value)}
+                      placeholder="URL foto Supabase atau /photos/..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (photoInput.trim() && photos.length < 20) {
+                          setPhotos([...photos, photoInput.trim()])
+                          setPhotoInput('')
+                        }
+                      }}
+                      className="rounded-lg border px-3"
+                    >
+                      Tambah
                     </button>
                   </div>
-                ))}
+                </Field>
               </div>
-            )}
-          </Field>
-        </div>
-
-        <ModalFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {saving ? 'Adding...' : 'Add Gallery'}
-          </button>
-        </ModalFooter>
+            </details>
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={uploading}
+              className="flex-1 rounded-xl border px-4 py-2.5 text-sm"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={uploading || !outletId}
+              className="flex-1 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {saving ? 'Menyimpan...' : uploading ? 'Mengunggah...' : 'Simpan galeri'}
+            </button>
+          </ModalFooter>
+        </fieldset>
       </form>
     </Modal>
   )
