@@ -15,7 +15,7 @@ import { LocationModule } from '@/components/admin/LocationModule'
 import { BrandingModule } from '@/components/admin/BrandingModule'
 import { ReportModule } from '@/components/admin/ReportModule'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -52,6 +52,10 @@ export default function AdminPage() {
       document.documentElement.classList.remove('dark')
     }
   }, [darkMode])
+
+  useEffect(() => {
+    if (!isChecking) useDashboardStore.getState().refreshDashboard().catch(error => toast.error(error.message))
+  }, [isChecking, activeModule])
 
   const renderModule = () => {
     const map: Record<string, React.ReactNode> = {
