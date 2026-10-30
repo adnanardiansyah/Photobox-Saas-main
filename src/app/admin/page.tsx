@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
 import { Sidebar } from '@/components/admin/Sidebar'
+import { useCanManage } from '@/components/admin/ui/WriteAccess'
 import { Header } from '@/components/admin/Header'
 import { DashboardOverview } from '@/components/admin/DashboardOverview'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
@@ -60,6 +61,7 @@ const modules: Record<string, ComponentType> = {
 
 export default function AdminPage() {
   const router = useRouter()
+  const canManage = useCanManage()
   const { activeModule, darkMode } = useDashboardStore(
     useShallow((state) => ({ activeModule: state.activeModule, darkMode: state.darkMode }))
   )
@@ -72,10 +74,11 @@ export default function AdminPage() {
         const response = await fetch('/api/admin/session', { credentials: 'include' })
         const data = await response.json()
         if (cancelled) return
-        if (!response.ok || !data.authenticated) {
+        if (!response.ok || !data.authenticated || !data.user) {
           router.replace('/admin/login')
           return
         }
+        useDashboardStore.getState().setCurrentUser(data.user)
         setIsChecking(false)
       } catch {
         if (!cancelled) router.replace('/admin/login')
@@ -124,6 +127,12 @@ export default function AdminPage() {
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {!canManage && (
+            <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              Mode baca: akun Anda dapat melihat data dan mengekspor laporan. Perubahan data
+              dilakukan oleh pemilik.
+            </p>
+          )}
           <div key={activeModule} className="admin-module-enter">
             <ActiveModule />
           </div>
