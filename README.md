@@ -26,7 +26,7 @@ PowerShell dengan execution policy ketat dapat memakai `npm.cmd` sebagai penggan
 
 Login admin di `/admin/login`. OWNER dan SUPER_ADMIN dapat mengelola data dalam tenant akun tersebut; MANAGER memiliki akses baca. STAFF tidak dapat membuka API admin. Tidak ada akses lintas tenant otomatis, termasuk untuk SUPER_ADMIN.
 
-Di menu **Outlets**, atur harga sesi, metode pembayaran, dan opsi cetak. Gunakan **Buat API key** untuk membuat kredensial perangkat. API key ditampilkan sekali dan disimpan sebagai hash SHA-256. Login di `/booth/login` menggunakan Machine ID dan API key tersebut. Key contoh dari seed hanya diterima di development.
+Di menu **Outlets**, atur harga sesi, metode pembayaran, dan opsi cetak. Gunakan **Hubungkan booth** untuk membuat kredensial perangkat. API key ditampilkan sekali dan disimpan sebagai hash SHA-256. Login di `/booth/login` menggunakan Machine ID dan API key tersebut. Key contoh dari seed hanya diterima di development.
 
 Template booth diambil dari database tenant. Harga dasar berasal dari konfigurasi outlet; field harga template belum ditambahkan sebagai biaya tambahan dalam alur booth.
 
@@ -61,3 +61,13 @@ Skrip pengujian galeri lama di root merupakan utilitas manual dan sebagian dapat
 ## Kredit
 
 Project oleh [@adnanadriansyah](https://github.com/adnanadriansyah).
+
+## Penggunaan dashboard
+
+Menu dan form utama memakai Bahasa Indonesia. Akun manager melihat penanda mode baca; tombol perubahan hanya ditampilkan untuk pemilik/super admin. Identitas header diambil dari sesi akun.
+
+Form tertutup setelah server mengonfirmasi penyimpanan. Jika gagal, pesan tampil di dalam form dan isian tetap ada untuk diperbaiki atau dicoba ulang. Hindari menutup/memuat ulang halaman sebelum isian berhasil disimpan.
+
+Galeri, template, logo, dan banner dapat diunggah langsung dalam format JPG/PNG/WebP, maksimal 4 MB per gambar. Pengaturan kode perangkat serta titik peta berada pada bagian opsional. Dialog **Hubungkan booth** menyediakan petunjuk dan tombol salin kredensial.
+
+Menu **Laporan** mengekspor CSV mengikuti filter periode/outlet. Pemberitahuan menampilkan data yang memerlukan perhatian ketika panel dibuka; fitur ini belum berupa notifikasi push. Lihat `docs/DASHBOARD_USABILITY.md` untuk rincian pemeriksaan.
