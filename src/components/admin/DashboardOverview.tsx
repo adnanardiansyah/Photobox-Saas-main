@@ -357,7 +357,7 @@ function QuickAction({ icon: Icon, label, module, color, index }: {
 // DashboardOverview — Full Premium
 // ============================================
 export function DashboardOverview() {
-  const { outlets, templates, users, vouchers, transactions, boothStatuses } = useDashboardStore()
+  const { outlets, templates, users, vouchers, transactions, boothStatuses, photosToday } = useDashboardStore()
 
   const totalOutlets    = outlets.length
   const activeOutlets   = outlets.filter(o => o.status === 'online').length
@@ -367,13 +367,14 @@ export function DashboardOverview() {
   const activeUsers     = users.filter(u => u.status === 'active').length
   const totalVouchers   = vouchers.length
   const activeVouchers  = vouchers.filter(v => v.isActive).length
-  const todayRevenue    = transactions.filter(t => t.status === 'success').reduce((s, t) => s + t.amount, 0)
-  const photosToday     = 156
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
+  const todayRevenue = transactions.filter(t => t.status === 'success' && new Date(t.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }) === today).reduce((sum, t) => sum + t.amount, 0)
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price)
 
   const formatTime = (dateString: string) => {
+    if (!dateString) return 'Belum ada heartbeat'
     const diff = Date.now() - new Date(dateString).getTime()
     const minutes = Math.floor(diff / 60000)
     if (minutes < 1) return 'Just now'
@@ -386,25 +387,25 @@ export function DashboardOverview() {
   const statCards = [
     {
       title: 'Total Outlets', value: totalOutlets, numericValue: totalOutlets,
-      change: '+2 this month', positive: true, icon: Store,
+      change: 'Outlet terdaftar', positive: true, icon: Store,
       gradient: 'linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(37,99,235,0.08) 100%)',
       glowColor: '#3b82f6',
     },
     {
-      title: 'Active Sessions', value: activeOutlets, numericValue: activeOutlets,
+      title: 'Online Outlets', value: activeOutlets, numericValue: activeOutlets,
       change: 'Currently active', positive: true, icon: Wifi,
       gradient: 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(22,163,74,0.08) 100%)',
       glowColor: '#22c55e',
     },
     {
       title: 'Revenue Today', value: formatPrice(todayRevenue), numericValue: undefined,
-      change: '+15% vs yesterday', positive: true, icon: DollarSign,
+      change: 'Transaksi terkonfirmasi hari ini', positive: true, icon: DollarSign,
       gradient: 'linear-gradient(135deg, rgba(168,85,247,0.18) 0%, rgba(126,34,206,0.08) 100%)',
       glowColor: '#a855f7',
     },
     {
       title: 'Photos Today', value: photosToday, numericValue: photosToday,
-      change: '-5% vs yesterday', positive: false, icon: Camera,
+      change: 'Foto tersimpan hari ini', positive: false, icon: Camera,
       gradient: 'linear-gradient(135deg, rgba(236,72,153,0.18) 0%, rgba(190,24,93,0.08) 100%)',
       glowColor: '#ec4899',
     },
