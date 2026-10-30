@@ -1,97 +1,21 @@
-// ============================================
-// WhatsApp Notification API Route
-// Triggered after photo session completes
-// ============================================
-
 import { NextRequest, NextResponse } from 'next/server'
-import { sendGalleryNotification, sendPaymentConfirmation } from '@/lib/whatsapp-service'
-
+import { prisma } from '@/lib/db/prisma'
+import { sendGalleryNotification } from '@/lib/whatsapp-service'
+import { requireBooth, apiError, ApiError } from '@/lib/api-security'
+import { rateLimit } from '@/lib/rate-limit'
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { 
-      phoneNumber, 
-      outletName, 
-      galleryCode, 
-      galleryUrl, 
-      photoCount,
-      type = 'gallery', // 'gallery' or 'payment'
-      amount,
-      sessionCode 
-    } = body
-
-    // Validate required fields
-    if (!phoneNumber) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number is required' },
-        { status: 400 }
-      )
-    }
-
-
-
-    // Send based on type
-    let result
-
-    if (type === 'payment' && amount && sessionCode) {
-      result = await sendPaymentConfirmation({
-        phoneNumber,
-        outletName: outletName || 'SnapNext Booth',
-        amount,
-        sessionCode,
-      })
-    } else {
-      result = await sendGalleryNotification({
-        phoneNumber,
-        outletName: outletName || 'SnapNext Booth',
-        galleryCode: galleryCode || '',
-        galleryUrl: galleryUrl || '',
-        photoCount,
-      })
-    }
-
-    if (result.success) {
-      console.log('[WhatsApp] Message sent:', result.messageId)
-      return NextResponse.json({
-        success: true,
-        messageId: result.messageId,
-      })
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: result.error,
-    })
-  } catch (error) {
-    console.error('[WhatsApp API] Error:', error)
-    return NextResponse.json(
-      { success: false, error: String(error) },
-      { status: 500 }
-    )
-  }
-}
-
-// ============================================
-// Process Offline Queue (called when back online)
-// ============================================
-
-export async function PUT(request: NextRequest) {
-  try {
-    // This endpoint is called by the client when they come back online
-    // It processes any queued WhatsApp messages
-    
-    // For server-side processing, we'd need to store queue in database
-    // For now, return success - client will handle local queue
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Queue processing endpoint ready',
-    })
-  } catch (error) {
-    console.error('[WhatsApp Queue] Error:', error)
-    return NextResponse.json(
-      { success: false, error: String(error) },
-      { status: 500 }
-    )
-  }
+    const outlet = await requireBooth(request)
+    rateLimit(request, `wa:${outlet.id}`, 5)
+    const { phoneNumber, galleryCode } = await request.json()
+    if (typeof phoneNumber !== 'string' || !/^\+?[0-9]{9,15}$/.test(phoneNumber) || typeof galleryCode !== 'string' || !galleryCode) throw new ApiError(400, 'Nomor telepon dan kode galeri tidak valid')
+    const session = await prisma.sessionPhoto.findFirst({ where: { galleryCode, outletId: outlet.id, status: 'COMPLETED', paymentStatus: 'PAID' } })
+    if (!session) throw new ApiError(404, 'Galeri tidak ditemukan')
+    if (session.galleryExpiresAt && session.galleryExpiresAt <= new Date()) throw new ApiError(410, 'Galeri kedaluwarsa')
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!appUrl) throw new ApiError(503, 'URL aplikasi belum dikonfigurasi')
+    const result = await sendGalleryNotification({ phoneNumber, outletName: outlet.name, galleryCode: session.galleryCode, galleryUrl: `${appUrl.replace(/\/$/, '')}/gallery?code=${encodeURIComponent(session.galleryCode)}`, photoCount: Array.isArray(session.photos) ? session.photos.length : 0 })
+    if (!result.success) throw new ApiError(502, 'Notifikasi WhatsApp gagal dikirim')
+    return NextResponse.json({ success: true, messageId: result.messageId })
+  } catch (error) { return apiError(error) }
 }
